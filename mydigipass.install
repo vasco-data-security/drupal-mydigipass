@@ -1,0 +1,99 @@
+<?php
+/**
+ * @file
+ * Install, update, and uninstall functions for the mydigipass module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function mydigipass_install() {
+  drupal_install_schema('mydigipass');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function mydigipass_uninstall() {
+  // Remove the database tables.
+  drupal_uninstall_schema('mydigipass');
+  // Remove the different configuration settings.
+  variable_del('mydigipass_environment');
+  variable_del('mydigipass_client_id');
+  variable_del('mydigipass_client_secret');
+  variable_del('mydigipass_authentication_mode');
+  variable_del('mydigipass_link_form_help');
+  variable_del('mydigipass_link_form_style');
+  variable_del('mydigipass_link_form_text');
+  variable_del('mydigipass_login_form_help');
+  variable_del('mydigipass_login_form_style');
+  variable_del('mydigipass_login_form_text');
+  variable_del('mydigipass_register_form_help');
+  variable_del('mydigipass_register_form_style');
+  variable_del('mydigipass_register_form_text');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function mydigipass_schema() {
+  $schema['mydigipass_user_link'] = array(
+    'description' => t('Stores the links between Drupal users and MYDIGIPASS.COM users.'),
+    'fields' => array(
+    'drupal_uid' => array(
+      'description' => t('Drupal user ID'),
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE,
+    ),
+    'mdp_uuid' => array(
+      'description' => t('MYDIGIPASS.COM user ID'),
+      'type' => 'varchar',
+      'length' => '36',
+      'not null' => TRUE,
+    ),
+    ),
+    'primary key' => array('mdp_uuid'),
+  );
+
+  $schema['mydigipass_profile_fields'] = array(
+    'description' => t("Stores the attribute keys of which the values have to be shown in a user's profile."),
+    'fields' => array(
+    'name' => array(
+      'description' => t('The attribute key.'),
+      'type' => 'varchar',
+      'length' => '256',
+      'not null' => TRUE,
+    ),
+    ),
+    'primary key' => array('name'),
+  );
+
+  $schema['mydigipass_user_data'] = array(
+    'description' => t('Stores the user attributes received from MYDIGIPASS.COM.'),
+    'fields' => array(
+    'mdp_uuid' => array(
+      'description' => t('MYDIGIPASS.COM user ID'),
+      'type' => 'varchar',
+      'length' => '36',
+      'not null' => TRUE,
+    ),
+    'attribute_key' => array(
+      'description' => t('The attribute key.'),
+      'type' => 'varchar',
+      'length' => '255',
+      'not null' => TRUE,
+    ),
+    'attribute_value' => array(
+      'description' => t('The attribute value.'),
+      'type' => 'varchar',
+      'length' => '1024',
+      'not null' => TRUE,
+    ),
+    ),
+    'primary key' => array('mdp_uuid', 'attribute_key'),
+  );
+
+  return $schema;
+}
+
