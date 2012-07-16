@@ -1,8 +1,5 @@
-; $Id$
 name = MYDIGIPASS.COM Authentication
 description = Implements Authentication via MYDIGIPASS.COM
 package = Security
 core = 6.x
 php = 5.0
-version = 1.0
-
