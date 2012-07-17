@@ -48,7 +48,7 @@ function mydigipass_admin_settings($form_state) {
       '#title' => 'client_secret',
       // For security reasons, the client_secret is never filled in. This is
       // also the default behaviour of a password-type form field.
-      //'#default_value' => variable_get('mydigipass_client_secret', ''),
+      // '#default_value' => variable_get('mydigipass_client_secret', ''),
       '#description' => t('The client secret issued by MYDIGIPASS.COM.'),
       '#required' => TRUE,
     );
@@ -170,11 +170,11 @@ function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state)
       }
       else {
         drupal_set_message(
-          t('An error occured while contacting %url: the HTTP status code was %http_status', 
+          t('An error occured while contacting %url: the HTTP status code was %http_status',
             array(
-              '%http_status' => $http_status_array[1], 
+              '%http_status' => $http_status_array[1],
               '%url' => $url,
-             )), 
+            )),
           'error');
       }
     }
@@ -187,7 +187,7 @@ function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state)
 /**
  * Page callback for 'admin/settings/mydigipass/user_profile_fiels'.
  *
- * Shows the admin form which allows the administrator to specify which 
+ * Shows the admin form which allows the administrator to specify which
  * attributes are being displayed on a user's profile page.
  *
  * @see mydigipass_admin_settings_user_profile_fields_form_validate()
@@ -196,7 +196,7 @@ function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state)
 function mydigipass_admin_settings_user_profile_fields_form($form_state) {
   $form = array();
 
-  // Extract all available fields which are currently selected
+  // Extract all available fields which are currently selected.
   $sql = 'SELECT name FROM {mydigipass_profile_fields}';
   $result = db_query($sql);
   $selected_user_data_fields = array();
@@ -204,7 +204,8 @@ function mydigipass_admin_settings_user_profile_fields_form($form_state) {
     $selected_user_data_fields[] = $row->name;
   }
 
-  // Extract all available fields which are currently available in the user_data column
+  // Extract all available fields which are currently available in the
+  // user_data column.
   $sql = 'SELECT DISTINCT attribute_key FROM {mydigipass_user_data} WHERE attribute_key <> \'error\' ORDER BY attribute_key ASC';
   $result = db_query($sql);
   $all_user_data_fields = array();
@@ -228,7 +229,7 @@ function mydigipass_admin_settings_user_profile_fields_form($form_state) {
 }
 
 /**
- * Form submit handler for mydigipass_admin_settings_user_profile_fields_form().
+ * Submit handler for mydigipass_admin_settings_user_profile_fields_form().
  *
  * @see mydigipass_admin_settings_user_profile_fields_form_validate()
  */
@@ -236,7 +237,8 @@ function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form
   // Store the submitted form values in a variable.
   $user_data_fields = $form_state['values']['user_data_fields'];
 
-  // A boolean via which we will track whether the database queries were succesfull.
+  // A boolean via which we will track whether the database queries were 
+  // succesfull.
   $success = TRUE;
 
   // Delete the previous stored setting.
@@ -273,22 +275,38 @@ function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form
  */
 function mydigipass_admin_settings_button_style_form($form_state) {
   $forms = array(
-    'login' => 'Login', 
-    'register' => 'Register', 
+    'login' => 'Login',
+    'register' => 'Register',
     'link' => 'Link');
   $defaults = array(
     'login' => array(
-      'style' => 'default', 
-      'text' => 'secure-login', 
+      'style' => 'default',
+      'text' => 'secure-login',
       'help' => 'true'),
     'register' => array(
-      'style' => 'large', 
-      'text' => 'sign-up', 
+      'style' => 'large',
+      'text' => 'sign-up',
       'help' => 'true'),
     'link' => array(
-      'style' => 'large', 
-      'text' => 'connect', 
+      'style' => 'large',
+      'text' => 'connect',
       'help' => 'true'),
+  );
+  $form_style_options = array(
+    'default' => 'default', 
+    'large' => 'large', 
+    'medium' => 'medium', 
+    'small' => 'small', 
+    'false' => 'false'
+  );
+  $form_text_options = array(
+    'connect' => 'connect', 
+    'sign-up' => 'sign-up', 
+    'secure-login' => 'secure-login'
+  );
+  $form_help_options = array(
+    'true' => 'true', 
+    'false' => 'false'
   );
   foreach ($forms as $key => $value) {
     $form[$key . '_form'] = array(
@@ -301,7 +319,7 @@ function mydigipass_admin_settings_button_style_form($form_state) {
     $form[$key . '_form']['mydigipass_' . $key . '_form_style'] = array(
       '#type' => 'radios',
       '#title' => t('Style'),
-      '#options' => array('default' => 'default', 'large' => 'large', 'medium' => 'medium', 'small' => 'small', 'false' => 'false'),
+      '#options' => $form_style_options,
       '#default_value' => variable_get('mydigipass_' . $key . '_form_style', $defaults[$key]['style']),
       '#required' => TRUE,
       '#description' => t("Sets the button style. Use false if you don't want to use the default MYDIGIPASS.COM Secure Login button styling."),
@@ -309,7 +327,7 @@ function mydigipass_admin_settings_button_style_form($form_state) {
     $form[$key . '_form']['mydigipass_' . $key . '_form_text'] = array(
       '#type' => 'radios',
       '#title' => t('Text'),
-      '#options' => array('connect' => 'connect', 'sign-up' => 'sign-up', 'secure-login' => 'secure-login'),
+      '#options' => $form_text_options,
       '#default_value' => variable_get('mydigipass_' . $key . '_form_text', $defaults[$key]['text']),
       '#required' => TRUE,
       '#description' => t("Specifies the text to appear on the button. Note that this attribute is irrelevant if the style attribute is set to default or small."),
@@ -317,7 +335,7 @@ function mydigipass_admin_settings_button_style_form($form_state) {
     $form[$key . '_form']['mydigipass_' . $key . '_form_help'] = array(
       '#type' => 'radios',
       '#title' => t('Help'),
-      '#options' => array('true' => 'true', 'false' => 'false'),
+      '#options' => $form_help_options,
       '#default_value' => variable_get('mydigipass_' . $key . '_form_help', $defaults[$key]['help']),
       '#required' => TRUE,
       '#description' => t("If set to true, meta-text is used to display information about the button in question."),
