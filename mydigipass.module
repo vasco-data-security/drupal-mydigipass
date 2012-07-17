@@ -9,9 +9,6 @@
  * https://developer.mydigipass.com
  */
 
-//////////////////////////////////////////////////////////////////////////////
-// Core Drupal API hooks
-
 /**
  * Implements hook_menu().
  */
@@ -32,7 +29,7 @@ function mydigipass_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
 
-  $items['admin/settings/mydigipass/user_profile_fiels'] = array(
+  $items['admin/settings/mydigipass/user_data_fields'] = array(
     'title' => 'User data fields',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mydigipass_admin_settings_user_profile_fields_form'),
@@ -109,7 +106,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     // The standard login form.
     case 'user_login_block':
     case 'user_login':
-      // Add the MYDIGIPASS.COM button
+      // Add the MYDIGIPASS.COM button.
       $form['account']['mydigipass'] = array(
         '#type' => 'item',
         '#value' => '<a class="dpplus-connect" '
@@ -120,13 +117,15 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
           . 'data-help="' . variable_get('mydigipass_login_form_help', 'true') . '" '
           . 'href="#">Connect with MYDIGIPASS.COM</a>',
       );
-      // Add mydigipass_enforce_authentication_mode_during_login as first validation handler
+      // Add mydigipass_enforce_authentication_mode_during_login as first
+      // validation handler.
       $form['#validate'] = array_merge(array('mydigipass_enforce_authentication_mode_during_login'), $form['#validate']);
       break;
 
     // The form which allows to reset your password.
     case 'user_pass':
-      // Add mydigipass_enforce_authentication_mode_during_password_reset as first validation handler
+      // Add mydigipass_enforce_authentication_mode_during_password_reset as
+      // first validation handler.
       $form['#validate'] = array_merge(array('mydigipass_enforce_authentication_mode_during_password_reset'), $form['#validate']);
       break;
 
@@ -148,7 +147,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     // The form shown on the mydigipass link page when the end-user indicated
     // that he/she already had a Drupal account.
     case 'mydigipass_user_login':
-      // Change the text on the submit button
+      // Change the text on the submit button.
       $form['submit']['#value'] = t('Link to account');
 
       // Add a submit handler which links the MYDIGIPASS.COM account to the
@@ -174,7 +173,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       $form['pass']['#type'] = 'hidden';
       $form['pass']['#value'] = 'hidden';
 
-      // Change the text on the submit button
+      // Change the text on the submit button.
       $form['submit']['#value'] = t('Create new account and link to MYDIGIPASS.COM');
 
       // Add a submit handler which creates a new user and links the
@@ -190,9 +189,9 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
  * Implements hook_forms().
  */
 function mydigipass_forms() {
-  // mydigipass_user_login is a slightly modified user_login form
+  // mydigipass_user_login is a slightly modified user_login form.
   $forms['mydigipass_user_login']['callback'] = 'user_login';
-  // mydigipass_user_register is a slightly modified user_register form
+  // mydigipass_user_register is a slightly modified user_register form.
   $forms['mydigipass_user_register']['callback'] = 'user_register';
 
   return $forms;
@@ -203,103 +202,104 @@ function mydigipass_forms() {
  */
 function mydigipass_user($op, &$edit, &$account, $category = NULL) {
   switch ($op) {
-  case 'view':
-    // Check if the user is linked to a MYDIGIPASS.COM account
-    $sql = 'SELECT COUNT(*) FROM {mydigipass_user_link} WHERE drupal_uid = %d';
-    $result = db_result(db_query($sql, $account->uid));
-    if ($result == 1) {
-      // The user is linked to a MYDIGIPASS.COM account, so extract the email address of the MYDIGIPASS.COM account
-      $sql = "SELECT UD.attribute_value "
-        . "FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD "
-        . "WHERE UL.drupal_uid = %d "
-        . "AND UL.mdp_uuid = UD.mdp_uuid "
-        . "AND UD.attribute_key = 'email'";
-      $mdp_email = db_result(db_query($sql, $account->uid));
-      $account->content['summary']['mydigipass'] = array(
-        '#type' => 'user_profile_item',
-        '#title' => 'MYDIGIPASS.COM',
-        '#value' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
-      );
-
-      // Add the known MYDIGIPASS.COM user data of which the administrator
-      // allowed it to be shown.
-      $account->content['mydigipass_user_data'] = array(
-        '#type' => 'user_profile_category',
-        '#title' => t('MYDIGIPASS.COM user data'),
-        '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
-      );
-      $sql = "SELECT * "
-        . "FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD "
-        . "WHERE UL.drupal_uid = %d "
-        . "AND UL.mdp_uuid = UD.mdp_uuid "
-        . "AND UD.attribute_key IN (SELECT name FROM {mydigipass_profile_fields}) "
-        . "ORDER BY UD.attribute_key";
-      $result = db_query($sql, $account->uid);
-
-      while ($row = db_fetch_object($result)) {
-        $account->content['mydigipass_user_data'][$row->attribute_key] = array(
+    case 'view':
+      // Check if the user is linked to a MYDIGIPASS.COM account.
+      $sql = 'SELECT COUNT(*) FROM {mydigipass_user_link} WHERE drupal_uid = %d';
+      $result = db_result(db_query($sql, $account->uid));
+      if ($result == 1) {
+        // The user is linked to a MYDIGIPASS.COM account, so extract the email
+        // address of the MYDIGIPASS.COM account.
+        $sql = "SELECT UD.attribute_value "
+          . "FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD "
+          . "WHERE UL.drupal_uid = %d "
+          . "AND UL.mdp_uuid = UD.mdp_uuid "
+          . "AND UD.attribute_key = 'email'";
+        $mdp_email = db_result(db_query($sql, $account->uid));
+        $account->content['summary']['mydigipass'] = array(
           '#type' => 'user_profile_item',
-          '#title' => t($row->attribute_key),
-          '#value' => $row->attribute_value,
-          '#attributes' => array('class' => 'profile-'. $row->attribute_key),
+          '#title' => 'MYDIGIPASS.COM',
+          '#value' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
+        );
+
+        // Add the known MYDIGIPASS.COM user data of which the administrator
+        // allowed it to be shown.
+        $account->content['mydigipass_user_data'] = array(
+          '#type' => 'user_profile_category',
+          '#title' => t('MYDIGIPASS.COM user data'),
+          '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
+        );
+        $sql = "SELECT * "
+          . "FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD "
+          . "WHERE UL.drupal_uid = %d "
+          . "AND UL.mdp_uuid = UD.mdp_uuid "
+          . "AND UD.attribute_key IN (SELECT name FROM {mydigipass_profile_fields}) "
+          . "ORDER BY UD.attribute_key";
+        $result = db_query($sql, $account->uid);
+
+        while ($row = db_fetch_object($result)) {
+          $account->content['mydigipass_user_data'][$row->attribute_key] = array(
+            '#type' => 'user_profile_item',
+            '#title' => t($row->attribute_key),
+            '#value' => $row->attribute_value,
+            '#attributes' => array('class' => 'profile-' . $row->attribute_key),
+          );
+        }
+      }
+      else {
+        $account->content['summary']['mydigipass'] = array(
+          '#type' => 'user_profile_item',
+          '#title' => 'MYDIGIPASS.COM',
+          '#value' => t('This user account is not yet linked to a MYDIGIPASS.COM account'),
         );
       }
-    }
-    else {
-      $account->content['summary']['mydigipass'] = array(
-        '#type' => 'user_profile_item',
-        '#title' => 'MYDIGIPASS.COM',
-        '#value' => t('This user account is not yet linked to a MYDIGIPASS.COM account'),
-      );
-    }
-    break;
+      break;
 
-  case 'form':
-    return mydigipass_form_profile($edit, $account);
-    break;
+    case 'form':
+      return mydigipass_form_profile($edit, $account);
+      break;
 
-  case 'delete':
-    // A user account is being deleted. The personal data and the link with
-    // MYDIGIPASS.COM should also be deleted.
-    // Lookup the MYDIGIPASS.COM uuid which is associated with the user.
-    $sql = "SELECT mdp_uuid FROM {mydigipass_user_link} WHERE drupal_uid = %d";
-    $uuid = db_result(db_query($sql, $account->uid));
+    case 'delete':
+      // A user account is being deleted. The personal data and the link with
+      // MYDIGIPASS.COM should also be deleted.
+      // Lookup the MYDIGIPASS.COM uuid which is associated with the user.
+      $sql = "SELECT mdp_uuid FROM {mydigipass_user_link} WHERE drupal_uid = %d";
+      $uuid = db_result(db_query($sql, $account->uid));
 
-    // Delete the link between the Drupal user and the MYDIGIPASS.COM user.
-    $sql = "DELETE FROM {mydigipass_user_link} WHERE mdp_uuid = '%s'";
-    db_query($sql, $uuid);
+      // Delete the link between the Drupal user and the MYDIGIPASS.COM user.
+      $sql = "DELETE FROM {mydigipass_user_link} WHERE mdp_uuid = '%s'";
+      db_query($sql, $uuid);
 
-    // Delete the personal data of the MYDIGIPASS.COM user.
-    $sql = "DELETE FROM {mydigipass_user_data} WHERE mdp_uuid = '%s'";
-    db_query($sql, $uuid);
+      // Delete the personal data of the MYDIGIPASS.COM user.
+      $sql = "DELETE FROM {mydigipass_user_data} WHERE mdp_uuid = '%s'";
+      db_query($sql, $uuid);
 
-    break;
+      break;
 
-  case 'login':
-    // Check if this site is configured in "MYDIGIPASS.COM only" mode. If so,
-    // it is important to check if the MYDIGIPASS.COM uuid has been set in the
-    // current session. If so, then this indicates that the user has already
-    // been authenticated by MYDIGIPASS.COM. If the uuid is not yet set in the
-    // session, then the user tries to authenticate via some other means which
-    // is not allowed. An occasion in which this may occur is if the user
-    // received an email with a one-time login URL.
-    if (variable_get('mydigipass_authentication_mode', 'mdp_only') == 'mdp_only') {
-      $sql = "SELECT count(*) FROM {mydigipass_user_link} UL WHERE UL.drupal_uid = %d";
-      $result = db_result(db_query($sql, $account->uid));
+    case 'login':
+      // Check if this site is configured in "MYDIGIPASS.COM only" mode. If so,
+      // it is important to check if the MYDIGIPASS.COM uuid has been set in the
+      // current session. If so, then this indicates that the user has already
+      // been authenticated by MYDIGIPASS.COM. If the uuid is not yet set in the
+      // session, then the user tries to authenticate via some other means which
+      // is not allowed. An occasion in which this may occur is if the user
+      // received an email with a one-time login URL.
+      if (variable_get('mydigipass_authentication_mode', 'mdp_only') == 'mdp_only') {
+        $sql = "SELECT count(*) FROM {mydigipass_user_link} UL WHERE UL.drupal_uid = %d";
+        $result = db_result(db_query($sql, $account->uid));
 
-      if (($result > 0) && empty($_SESSION['mydigipass_uuid'])) {
-        global $user;
-        // Load the anonymous user
-        $user = drupal_anonymous_user();
-        drupal_set_message(t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM."), 'error');
-        watchdog('mydigipass', 'The session for user %uid has been destroyed since the user managed to logon by not using MYDIGIPASS.COM.', array('%uid' => $account->uid), WATCHDOG_ERROR);
-        // Redirect the user to the front-page. If this is not done, the user
-        // can receive an access denied page in some cases (e.g. when using a
-        // one-time login.
-        drupal_goto('<front>');
+        if (($result > 0) && empty($_SESSION['mydigipass_uuid'])) {
+          global $user;
+          // Load the anonymous user.
+          $user = drupal_anonymous_user();
+          drupal_set_message(t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM."), 'error');
+          watchdog('mydigipass', 'The session for user %uid has been destroyed since the user managed to logon by not using MYDIGIPASS.COM.', array('%uid' => $account->uid), WATCHDOG_ERROR);
+          // Redirect the user to the front-page. If this is not done, the user
+          // can receive an access denied page in some cases (e.g. when using a
+          // one-time login.
+          drupal_goto('<front>');
+        }
       }
-    }
-    break;
+      break;
   }
 }
 
@@ -366,7 +366,7 @@ function mydigipass_enforce_authentication_mode_during_password_reset($form, &$f
 function mydigipass_link_user_to_logged_on_user($form, &$form_state) {
   global $user;
   $uuid = $_SESSION['mydigipass_uuid'];
-  // Link the Drupal user to the MYDIGIPASS.COM user
+  // Link the Drupal user to the MYDIGIPASS.COM user.
   $sql = "INSERT INTO {mydigipass_user_link} (drupal_uid, mdp_uuid) VALUES (%d, '%s')";
   $success = db_query($sql, $user->uid, $uuid);
 
@@ -390,8 +390,7 @@ function mydigipass_link_user_to_new_user($form, &$form_state) {
 
   $new_username = $form_state['values']['name'];
 
-  // Set up variables for registration
-  // Set up your user object to register
+  // Register the new user.
   user_external_login_register($new_username, 'mydigipass');
 
   // user_external_login_register() creates a new account, but only sets the
@@ -413,7 +412,8 @@ function mydigipass_link_user_to_new_user($form, &$form_state) {
     // Reset the $user object. user_external_login() behaves strangely
     // if this isn't done, even if $user->uid is set to 0.
     $user = drupal_anonymous_user();
-    user_external_login($registered_user); // This will restore $user
+    // The following statement will restore $user.
+    user_external_login($registered_user);
 
     drupal_set_message(t('Registration successful. You are now logged in.'));
 
@@ -449,7 +449,7 @@ function mydigipass_form_profile($edit, $account) {
   $form = array();
   $form['mydigipass'] = array(
     '#type' => 'fieldset',
-    '#title' => 'MYDIGIPASS.COM'
+    '#title' => 'MYDIGIPASS.COM',
   );
 
   // Check if the user is linked to a MYDIGIPASS.COM account.
@@ -486,11 +486,11 @@ function mydigipass_form_profile($edit, $account) {
         '#value' => t('Click the following button to link your account with MYDIGIPASS.COM'),
       );
 
-      // Generate a random 32-char string. This string will be used as value for
-      // the state parameter and is stored in this user's session. This allows to
-      // verify that the end-user effectivelity clicked the button to link and
-      // will avoid that a CSRF-alike attack is being performed on a logged-on
-      // end-user by a malicious person.
+      // Generate a random 32-char string. This string will be used as value
+      // for the state parameter and is stored in this user's session. This
+      // allows to verify that the end-user effectivelity clicked the button to
+      // link and will avoid that a CSRF-alike attack is being performed on a
+      // logged-on end-user by a malicious person.
       $_SESSION['mydigipass_link_code'] = user_password(32);
 
       // The MYDIGIPASS.COM button also contains the data-state parameter.
@@ -498,12 +498,12 @@ function mydigipass_form_profile($edit, $account) {
         '#type' => 'item',
         '#value' => '<a class="dpplus-connect" '
           . 'data-client-id="' . variable_get('mydigipass_client_id', '') . '" '
-        . 'data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" '
-        . 'data-state="' . $_SESSION['mydigipass_link_code'] . '" '
-        . 'data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" '
-        . 'data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" '
-        . 'data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" '
-        . 'href="#">Connect with MYDIGIPASS.COM</a>',
+          . 'data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" '
+          . 'data-state="' . $_SESSION['mydigipass_link_code'] . '" '
+          . 'data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" '
+          . 'data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" '
+          . 'data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" '
+          . 'href="#">Connect with MYDIGIPASS.COM</a>',
       );
     }
     else {
@@ -519,15 +519,15 @@ function mydigipass_form_profile($edit, $account) {
 }
 
 /**
- * Submit handler which removes the link between the current user and MYDIGIPASS.COM
- *
+ * Submit handler which removes the link between the current user and
+ * MYDIGIPASS.COM.
  */
 function mydigipass_form_profile_unlink($form, &$form_state) {
   // Lookup the MYDIGIPASS.COM uuid which is associated with the user.
   $sql = "SELECT mdp_uuid FROM {mydigipass_user_link} WHERE drupal_uid = %d";
   $uuid = db_result(db_query($sql, $form_state['values']['_account']->uid));
 
-  // Delete the link between the Drupal user and the MYDIGIPASS.COM user
+  // Delete the link between the Drupal user and the MYDIGIPASS.COM user.
   $sql = "DELETE FROM {mydigipass_user_link} WHERE mdp_uuid = '%s'";
   $success = db_query($sql, $uuid);
 
@@ -565,16 +565,18 @@ function _mydigipass_get_endpoint_url($endpoint) {
   // Check if the environment is not set (i.e. the module is not yet
   // configured) or if it is set to a wrong value.
   if (($environment == '') || ($base_url == '')) {
-  return '';
+    return '';
   }
 
   switch ($endpoint) {
     case 'token_endpoint':
       return $base_url . '/oauth/token';
       break;
+
     case 'data_endpoint':
       return $base_url . '/oauth/user_data';
       break;
+
     case 'dp_connect.js':
       return $base_url .  '/dp_connect.js';
       break;
@@ -582,6 +584,21 @@ function _mydigipass_get_endpoint_url($endpoint) {
   return '';
 }
 
+/**
+ * Page callback for 'mydigipass/link'.
+ *
+ * Shows the first page of a wizard which allows a MYDIGIPASS.COM user to link
+ * his/her MYDIGIPASS.COM account to a Drupal account.
+ *
+ * An end-user arrives on this page when after having authenticated at
+ * MYDIGIPASS.COM and after having been redirected to the callback page. The
+ * callback page detected that the MYDIGIPASS.COM was not yet linked to a
+ * Drupal account and redirects the end-user to the "Link with MYDIGIPASS.COM"
+ * wizard. The first page of this wizard allows the end-user to choose between
+ * linking his MYDIGIPASS.COM account to an existing Drupal account or to
+ * create a new Drupal account and link immediately to his/her MYDIGIPASS.COM
+ * account.
+ */
 function mydigipass_link_user_form() {
   $form = array();
 
@@ -610,6 +627,15 @@ function mydigipass_link_user_form() {
   return $form;
 }
 
+/**
+ * Submit handler of the first page in the wizard to link a user.
+ *
+ * The submit handler only evaluates the end-user's choice:
+ *  - If the end-user chose to create a new user, then he/she is redirected
+ *    to mydigipass/link/new_user.
+ *  - Otherwise the user already has an account and is therefore redirected
+ *    to mydigipass/link/existing_user.
+ */
 function mydigipass_link_user_form_submit($form, &$form_state) {
   if ($form_state['values']['scenario'] == 'new_user') {
     drupal_goto('mydigipass/link/new_user');
@@ -619,6 +645,19 @@ function mydigipass_link_user_form_submit($form, &$form_state) {
   }
 }
 
+/**
+ * Second page in the wizard to link a Drupal user to MYDIGIPASS.COM.
+ *
+ * This function checks whether it is allowed to create new user accounts on
+ * the website. If not, then an error message is returned. If it is allowed,
+ * then a form which resembles the user registration form is returned.
+ * Using hook_form_alter an additional submit handler is added to the form
+ * which causes that the newly created user is linked to the MYDIGIPASS.COM
+ * account.
+ *
+ * @see mydigipass_forms()
+ * @see mydigipass_form_alter()
+ */
 function mydigipass_link_new_user() {
   $output = '';
 
@@ -633,6 +672,17 @@ function mydigipass_link_new_user() {
   return $output;
 }
 
+/**
+ * Second page in the wizard to link a Drupal user to MYDIGIPASS.COM.
+ *
+ * This function returns a form which resembles the user login form.
+ * Using hook_form_alter an additional submit handler is added to the form
+ * which causes that the existing  user is linked to the MYDIGIPASS.COM
+ * account.
+ *
+ * @see mydigipass_forms()
+ * @see mydigipass_form_alter()
+ */
 function mydigipass_link_existing_user() {
   $output = '';
 
