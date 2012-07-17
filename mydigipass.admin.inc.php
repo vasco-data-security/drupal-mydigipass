@@ -311,10 +311,10 @@ function mydigipass_admin_settings_button_style_form($form_state) {
   foreach ($forms as $key => $value) {
     $form[$key . '_form'] = array(
       '#type' => 'fieldset',
-      '#title' => t(check_plain($value) . " form"),
+      '#title' => t("@value form", array('@value' => $value)),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#description' => t('Use the options below to modify the style of the MYDIGIPASS.COM button which is shown in the ' . check_plain($key) . ' form.'),
+      '#description' => t('Use the options below to modify the style of the MYDIGIPASS.COM button which is shown in the @key form.', array('@key' => $key)),
     );
     $form[$key . '_form']['mydigipass_' . $key . '_form_style'] = array(
       '#type' => 'radios',
