@@ -124,7 +124,7 @@ function mydigipass_admin_settings($form_state) {
 function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state) {
   $url = 'https://www.mydigipass.com';
   if (in_array('curl', get_loaded_extensions())) {
-    drupal_set_message(t("cURL is installed"));
+    drupal_set_message(t("The PHP cURL extension is installed on this server."));
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -145,7 +145,7 @@ function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state)
     }
   }
   elseif (function_exists('fsockopen') && in_array('openssl', get_loaded_extensions())) {
-    drupal_set_message(t("cURL is NOT installed, but fsockopen exists and OpenSSL is installed"));
+    drupal_set_message(t("The PHP cURL extension is NOT installed, but the fsockopen function exists and OpenSSL is installed."));
     $url = parse_url($url);
     $fp = fsockopen('ssl://' . $url['host'], 443, $err_num, $err_msg, 30);
     if ($fp === FALSE) {
