@@ -6,8 +6,7 @@
  */
 
 /**
- * Page callback for 'admin/settings/mydigipass' and for
- * 'admin/settings/mydigipass/account_settings'.
+ * Page callback for 'admin/settings/mydigipass' and for 'admin/settings/mydigipass/account_settings'.
  *
  * Shows the admin form which allows to configure the mydigipass module.
  *
@@ -237,7 +236,7 @@ function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form
   // Store the submitted form values in a variable.
   $user_data_fields = $form_state['values']['user_data_fields'];
 
-  // A boolean via which we will track whether the database queries were 
+  // A boolean via which we will track whether the database queries were
   // succesfull.
   $success = TRUE;
 
@@ -293,20 +292,20 @@ function mydigipass_admin_settings_button_style_form($form_state) {
       'help' => 'true'),
   );
   $form_style_options = array(
-    'default' => 'default', 
-    'large' => 'large', 
-    'medium' => 'medium', 
-    'small' => 'small', 
-    'false' => 'false'
+    'default' => 'default',
+    'large' => 'large',
+    'medium' => 'medium',
+    'small' => 'small',
+    'false' => 'false',
   );
   $form_text_options = array(
-    'connect' => 'connect', 
-    'sign-up' => 'sign-up', 
-    'secure-login' => 'secure-login'
+    'connect' => 'connect',
+    'sign-up' => 'sign-up',
+    'secure-login' => 'secure-login',
   );
   $form_help_options = array(
-    'true' => 'true', 
-    'false' => 'false'
+    'true' => 'true',
+    'false' => 'false',
   );
   foreach ($forms as $key => $value) {
     $form[$key . '_form'] = array(

@@ -105,9 +105,7 @@ function mydigipass_callback() {
   // Update the user data in the database.
   $sql = "DELETE FROM {mydigipass_user_data} WHERE mdp_uuid = '%s'";
   db_query($sql, $user_data_array['uuid']);
-  $sql = "INSERT INTO {mydigipass_user_data} "
-    . "(mdp_uuid, attribute_key, attribute_value) "
-    . "VALUES ('%s', '%s', '%s')";
+  $sql = "INSERT INTO {mydigipass_user_data} (mdp_uuid, attribute_key, attribute_value) VALUES ('%s', '%s', '%s')";
   foreach ($user_data_array as $key => $value) {
     db_query($sql, $user_data_array['uuid'], $key, $value);
   }
@@ -122,9 +120,7 @@ function mydigipass_callback() {
     // user, let's authenticate the Drupal user.
     global $user;
 
-    $sql = "SELECT name "
-      . "FROM {users} U, {mydigipass_user_link} MDP "
-      . "WHERE U.uid = MDP.drupal_uid AND mdp_uuid = '%s'";
+    $sql = "SELECT name FROM {users} U, {mydigipass_user_link} MDP WHERE U.uid = MDP.drupal_uid AND mdp_uuid = '%s'";
     $name = db_result(db_query($sql, $user_data_array['uuid']));
     $user = user_load(array('name' => $name));
     $success = user_external_login($user);
@@ -151,7 +147,7 @@ function mydigipass_callback() {
     if (user_is_logged_in() && !empty($_SESSION['mydigipass_link_code']) &&
         ($state == $_SESSION['mydigipass_link_code'])) {
       global $user;
-      // Link to currently logged on user
+      // Link to currently logged on user.
       $sql = "INSERT INTO {mydigipass_user_link} "
         . "(drupal_uid, mdp_uuid) VALUES (%d, '%s')";
       $success = db_query($sql, $user->uid, $user_data_array['uuid']);
@@ -224,9 +220,7 @@ function _mydigipass_consume_authorisation_code($code) {
   }
 
   // Step 1: exchange the authorisation code for an access token.
-  $access_token = ($method == 'curl' ?
-    _mydigipass_callback_get_access_token_using_curl($code) :
-    _mydigipass_callback_get_access_token_using_fsockopen($code));
+  $access_token = ($method == 'curl' ? _mydigipass_callback_get_access_token_using_curl($code) : _mydigipass_callback_get_access_token_using_fsockopen($code));
 
   // Check if the function returned FALSE.
   if ($access_token === FALSE) {
@@ -250,9 +244,7 @@ function _mydigipass_consume_authorisation_code($code) {
   }
 
   // Step 2: exchange the access token for user data.
-  $user_data = ($method == 'curl' ?
-    _mydigipass_callback_get_user_data_using_curl($access_token) :
-    _mydigipass_callback_get_user_data_using_fsockopen($access_token));
+  $user_data = ($method == 'curl' ? _mydigipass_callback_get_user_data_using_curl($access_token) : _mydigipass_callback_get_user_data_using_fsockopen($access_token));
 
   // Check if the function returned FALSE.
   if ($user_data === FALSE) {
@@ -271,8 +263,7 @@ function _mydigipass_consume_authorisation_code($code) {
 }
 
 /**
- * Private helper function which exchanges the authorisation code for an access
- * token.
+ * Private helper function which exchanges the authorisation code for an access token.
  *
  * Exchanges the authorisation code for an access token and connects to
  * MYDIGIPASS.COM using the curl functions.
@@ -285,7 +276,7 @@ function _mydigipass_consume_authorisation_code($code) {
  *   If errors occured: FALSE
  */
 function _mydigipass_callback_get_access_token_using_curl($code) {
-  // Get the URL of the token endpoint
+  // Get the URL of the token endpoint.
   $token_endpoint = _mydigipass_get_endpoint_url('token_endpoint');
 
   // If either the authorisation code or the token endpoint URL is empty,
@@ -294,7 +285,7 @@ function _mydigipass_callback_get_access_token_using_curl($code) {
     return FALSE;
   }
 
-  // Exchange the authorisation code for an access token
+  // Exchange the authorisation code for an access token.
   $post_data = 'code=' . $code
    . '&client_secret=' . variable_get('mydigipass_client_secret', '')
    . '&client_id=' . variable_get('mydigipass_client_id', '')
@@ -410,8 +401,7 @@ function _mydigipass_callback_get_user_data_using_curl($access_token) {
 }
 
 /**
- * Private helper function which exchanges the authorisation code for an
- * access token.
+ * Private helper function which exchanges the authorisation code for an access token.
  *
  * Exchanges the authorisation code for an access token and connects to
  * MYDIGIPASS.COM using the fsockopen function.

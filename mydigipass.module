@@ -109,13 +109,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       // Add the MYDIGIPASS.COM button.
       $form['account']['mydigipass'] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" '
-          . 'data-client-id="' . variable_get('mydigipass_client_id', '') . '" '
-          . 'data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" '
-          . 'data-style="' . variable_get('mydigipass_login_form_style', 'default') . '" '
-          . 'data-text="' . variable_get('mydigipass_login_form_text', 'secure-login') . '" '
-          . 'data-help="' . variable_get('mydigipass_login_form_help', 'true') . '" '
-          . 'href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" data-style="' . variable_get('mydigipass_login_form_style', 'default') . '" data-text="' . variable_get('mydigipass_login_form_text', 'secure-login') . '" data-help="' . variable_get('mydigipass_login_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
       );
       // Add mydigipass_enforce_authentication_mode_during_login as first
       // validation handler.
@@ -133,14 +127,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     case 'user_register':
       $form['mydigipass'] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" '
-          . 'data-client-id="' . variable_get('mydigipass_client_id', '') . '" '
-          . 'data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" '
-          . 'data-state="register" '
-          . 'data-style="' . variable_get('mydigipass_register_form_style', 'large') . '" '
-          . 'data-text="' . variable_get('mydigipass_register_form_text', 'sign-up') . '" '
-          . 'data-help="' . variable_get('mydigipass_register_form_help', 'true') . '" '
-          . 'href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" data-state="register" data-style="' . variable_get('mydigipass_register_form_style', 'large') . '" data-text="' . variable_get('mydigipass_register_form_text', 'sign-up') . '" data-help="' . variable_get('mydigipass_register_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
       );
       break;
 
@@ -209,11 +196,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
       if ($result == 1) {
         // The user is linked to a MYDIGIPASS.COM account, so extract the email
         // address of the MYDIGIPASS.COM account.
-        $sql = "SELECT UD.attribute_value "
-          . "FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD "
-          . "WHERE UL.drupal_uid = %d "
-          . "AND UL.mdp_uuid = UD.mdp_uuid "
-          . "AND UD.attribute_key = 'email'";
+        $sql = "SELECT UD.attribute_value FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD WHERE UL.drupal_uid = %d AND UL.mdp_uuid = UD.mdp_uuid AND UD.attribute_key = 'email'";
         $mdp_email = db_result(db_query($sql, $account->uid));
         $account->content['summary']['mydigipass'] = array(
           '#type' => 'user_profile_item',
@@ -228,12 +211,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
           '#title' => t('MYDIGIPASS.COM user data'),
           '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
         );
-        $sql = "SELECT * "
-          . "FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD "
-          . "WHERE UL.drupal_uid = %d "
-          . "AND UL.mdp_uuid = UD.mdp_uuid "
-          . "AND UD.attribute_key IN (SELECT name FROM {mydigipass_profile_fields}) "
-          . "ORDER BY UD.attribute_key";
+        $sql = "SELECT * FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD WHERE UL.drupal_uid = %d AND UL.mdp_uuid = UD.mdp_uuid AND UD.attribute_key IN (SELECT name FROM {mydigipass_profile_fields}) ORDER BY UD.attribute_key";
         $result = db_query($sql, $account->uid);
 
         while ($row = db_fetch_object($result)) {
@@ -496,14 +474,7 @@ function mydigipass_form_profile($edit, $account) {
       // The MYDIGIPASS.COM button also contains the data-state parameter.
       $form['mydigipass'][] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" '
-          . 'data-client-id="' . variable_get('mydigipass_client_id', '') . '" '
-          . 'data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" '
-          . 'data-state="' . $_SESSION['mydigipass_link_code'] . '" '
-          . 'data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" '
-          . 'data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" '
-          . 'data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" '
-          . 'href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" data-state="' . $_SESSION['mydigipass_link_code'] . '" data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
       );
     }
     else {
