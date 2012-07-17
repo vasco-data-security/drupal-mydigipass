@@ -212,7 +212,7 @@ function _mydigipass_consume_authorisation_code($code) {
   else {
     drupal_set_message(
       t('This PHP installation lacks the necessary functions to make outbound '
-       . 'connections.')
+       . 'connections.'),
       'error');
     watchdog(
       'mydigipass',
