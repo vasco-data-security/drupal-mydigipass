@@ -282,8 +282,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
 }
 
 /**
- * Form validation handler. 
- * Enforcing that users register using their MYDIGIPASS.COM email.
+ * Form validation handler for mydigipass_user_register().
  *
  * This validation handler is executed when a user creates a new Drupal user
  * using the form which is shown on 'mydigipass/link/new_user'. This function
@@ -317,8 +316,7 @@ function mydigipass_enforce_authentication_mode_during_login($form, &$form_state
 }
 
 /**
- * Form validation handler.
- * Enforcing the authentication mode during password resets.
+ * Form validation handler for user_pass().
  *
  * Form validation handler of the password reset form which enforces the
  * authentication mode. If the authentication mode is set to mdp_only and the

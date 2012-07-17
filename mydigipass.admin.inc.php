@@ -6,11 +6,11 @@
  */
 
 /**
- * Page callback.
- * Shows the admin form which allows to configure the mydigipass module.
+ * Page callback: Shows an administration form.
  *
- * Page callback for 'admin/settings/mydigipass' and for 
- * 'admin/settings/mydigipass/account_settings'.
+ * Page callback for 'admin/settings/mydigipass' and for
+ * 'admin/settings/mydigipass/account_settings'. The form allows configuring
+ * the mydigipass module.
  *
  * @see mydigipass_admin_settings_submit_test_connectivity()
  *
@@ -99,7 +99,7 @@ function mydigipass_admin_settings($form_state) {
  * The button is present on 'admin/settings/mydigipass' and on
  * 'admin/settings/mydigipass/account_settings'.
  *
- * Tests whether the webserver is able to connect to the MYDIGIPASS.COM 
+ * Tests whether the webserver is able to connect to the MYDIGIPASS.COM
  * service.
  *
  * @return array
