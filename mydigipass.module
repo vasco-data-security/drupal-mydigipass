@@ -282,7 +282,8 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
 }
 
 /**
- * Form validation handler to enforce that users register using their MYDIGIPASS.COM email.
+ * Form validation handler. 
+ * Enforcing that users register using their MYDIGIPASS.COM email.
  *
  * This validation handler is executed when a user creates a new Drupal user
  * using the form which is shown on 'mydigipass/link/new_user'. This function
@@ -316,7 +317,8 @@ function mydigipass_enforce_authentication_mode_during_login($form, &$form_state
 }
 
 /**
- * Form validation handler to enforce the authentication mode during password resets.
+ * Form validation handler.
+ * Enforcing the authentication mode during password resets.
  *
  * Form validation handler of the password reset form which enforces the
  * authentication mode. If the authentication mode is set to mdp_only and the
@@ -357,7 +359,7 @@ function mydigipass_link_user_to_logged_on_user($form, &$form_state) {
 }
 
 /**
- * Form submit handler which creates a new user and links it to a MYDIGIPASS.COM user.
+ * Creates a new user and links it to a MYDIGIPASS.COM user.
  *
  * Form submit handler which is called after the mydigipass_user_register
  * form. This submit handler creates a new user and links this user to the
@@ -490,8 +492,9 @@ function mydigipass_form_profile($edit, $account) {
 }
 
 /**
- * Submit handler which removes the link between the current user and
- * MYDIGIPASS.COM.
+ * Removes the link between the current user and MYDIGIPASS.COM.
+ *
+ * Submit handler called from mydigipass_form_profile();
  */
 function mydigipass_form_profile_unlink($form, &$form_state) {
   // Lookup the MYDIGIPASS.COM uuid which is associated with the user.
@@ -521,11 +524,11 @@ function mydigipass_form_profile_unlink($form, &$form_state) {
  * Return the URL of the token or data endpoint while taking into account the
  * environment which was selected on the admin page.
  *
- * @param $endpoint
+ * @param string $endpoint
  *   The endpoint for which the URL is requested. Allowed values are
  *   'token_endpoint' and 'data_endpoint'.
  *
- * @return
+ * @return string
  *   The URL of the endpoint of an empty string is the environment is not yet
  *   selected or if the $endpoint value was wrong.
  */

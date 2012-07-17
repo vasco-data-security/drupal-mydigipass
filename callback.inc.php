@@ -192,10 +192,10 @@ function mydigipass_callback() {
  * authorisation code for an access token. Using the access token, it collects
  * the end-user data from MYDIGIPASS.COM.
  *
- * @param $code
+ * @param string $code
  *   The authorisation code which was extracted from the callback URL.
  *
- * @return
+ * @return array|bool
  *   An array containing the end-user data or FALSE in case an error occured.
  */
 function _mydigipass_consume_authorisation_code($code) {
@@ -263,15 +263,15 @@ function _mydigipass_consume_authorisation_code($code) {
 }
 
 /**
- * Private helper function which exchanges the authorisation code for an access token.
+ * Helper function which exchanges the authorisation code for an access token.
  *
  * Exchanges the authorisation code for an access token and connects to
  * MYDIGIPASS.COM using the curl functions.
  *
- * @param $code
+ * @param string $code
  *   The authorisation code which was provided in the callback URL.
  *
- * @return
+ * @return string|bool
  *   If no errors occured: a string containing the access token.
  *   If errors occured: FALSE
  */
@@ -349,10 +349,10 @@ function _mydigipass_callback_get_access_token_using_curl($code) {
  * Exchanges the access token for the user data and connects to MYDIGIPASS.COM
  * using the curl function.
  *
- * @param $access_token
+ * @param string $access_token
  *   The access token which was received from MYDIGIPASS.COM.
  *
- * @return
+ * @return array|bool
  *   If no errors occured: An associative array which contains the user data
  *                         in 'attribute_name' => 'attribute_value' pairs.
  *   If errors occured: FALSE
@@ -401,15 +401,15 @@ function _mydigipass_callback_get_user_data_using_curl($access_token) {
 }
 
 /**
- * Private helper function which exchanges the authorisation code for an access token.
+ * Helper function which exchanges the authorisation code for an access token.
  *
  * Exchanges the authorisation code for an access token and connects to
  * MYDIGIPASS.COM using the fsockopen function.
  *
- * @param $code
+ * @param string $code
  *   The authorisation code which was provided in the callback URL
  *
- * @return
+ * @return string|bool
  *   If no errors occured: a string containing the access token.
  *   If errors occured: FALSE
  */
@@ -501,10 +501,10 @@ function _mydigipass_callback_get_access_token_using_fsockopen($code) {
  * Exchanges the access token for the user data and connects to MYDIGIPASS.COM
  * using the fsockopen function.
  *
- * @param $access_token
+ * @param string $access_token
  *   The access token which was received from MYDIGIPASS.COM
  *
- * @return
+ * @return array|bool
  *   If no errors occured: An associative array which contains the user data
  *                         in 'attribute_name' => 'attribute_value' pairs.
  *   If errors occured: FALSE
