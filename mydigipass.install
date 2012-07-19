@@ -4,7 +4,7 @@
  * Install, update, and uninstall functions for the mydigipass module.
  */
 
- /**
+/**
  * Implements hook_requirements().
  */
 function mydigipass_requirements($phase) {
