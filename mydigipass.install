@@ -4,7 +4,7 @@
  * Install, update, and uninstall functions for the mydigipass module.
  */
 
-/**
+ /**
  * Implements hook_requirements().
  */
 function mydigipass_requirements($phase) {
@@ -58,6 +58,7 @@ function mydigipass_uninstall() {
   variable_del('mydigipass_environment');
   variable_del('mydigipass_client_id');
   variable_del('mydigipass_client_secret');
+  variable_del('mydigipass_callback_url');
   variable_del('mydigipass_authentication_mode');
   variable_del('mydigipass_link_form_help');
   variable_del('mydigipass_link_form_style');

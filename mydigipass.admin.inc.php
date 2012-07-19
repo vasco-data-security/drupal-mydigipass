@@ -61,6 +61,13 @@ function mydigipass_admin_settings($form_state) {
       '#value' => t('Click <a href="@here">here</a> to edit the client_secret', array('@here' => url('admin/settings/mydigipass', array('query' => array('edit_password' => 1))))),
     );
   }
+  $form['account_settings']['mydigipass_callback_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Callback URL'),
+    '#default_value' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+    '#description' => t('The callback URL of this website. The default value is !url.<br />Ensure that this is the same url which your submitted to MYDIGIPASS.COM!', array('!url' => url('mydigipass/callback', array('absolute' => TRUE)))),
+    '#required' => TRUE,
+  );
 
 
   $form['authentication_mode'] = array(

@@ -109,7 +109,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       // Add the MYDIGIPASS.COM button.
       $form['account']['mydigipass'] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" data-style="' . variable_get('mydigipass_login_form_style', 'default') . '" data-text="' . variable_get('mydigipass_login_form_text', 'secure-login') . '" data-help="' . variable_get('mydigipass_login_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))) . '" data-style="' . variable_get('mydigipass_login_form_style', 'default') . '" data-text="' . variable_get('mydigipass_login_form_text', 'secure-login') . '" data-help="' . variable_get('mydigipass_login_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
       );
       // Add mydigipass_enforce_authentication_mode_during_login as first
       // validation handler.
@@ -127,7 +127,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     case 'user_register':
       $form['mydigipass'] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" data-state="register" data-style="' . variable_get('mydigipass_register_form_style', 'large') . '" data-text="' . variable_get('mydigipass_register_form_text', 'sign-up') . '" data-help="' . variable_get('mydigipass_register_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))) . '" data-state="register" data-style="' . variable_get('mydigipass_register_form_style', 'large') . '" data-text="' . variable_get('mydigipass_register_form_text', 'sign-up') . '" data-help="' . variable_get('mydigipass_register_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
       );
       break;
 
@@ -474,7 +474,7 @@ function mydigipass_form_profile($edit, $account) {
       // The MYDIGIPASS.COM button also contains the data-state parameter.
       $form['mydigipass'][] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . url('mydigipass/callback', array('absolute' => TRUE)) . '" data-state="' . $_SESSION['mydigipass_link_code'] . '" data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))) . '" data-state="' . $_SESSION['mydigipass_link_code'] . '" data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
       );
     }
     else {

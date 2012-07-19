@@ -286,11 +286,11 @@ function _mydigipass_callback_get_access_token_using_curl($code) {
   }
 
   // Exchange the authorisation code for an access token.
-  $post_data = 'code=' . $code
-   . '&client_secret=' . variable_get('mydigipass_client_secret', '')
-   . '&client_id=' . variable_get('mydigipass_client_id', '')
-   . '&redirect_uri=' . url('mydigipass/callback', array('absolute' => TRUE))
-   . '&grant_type=authorization_code';
+  $post_data = 'code=' . $code;
+  $post_data .= '&client_secret=' . variable_get('mydigipass_client_secret', '');
+  $post_data .= '&client_id=' . variable_get('mydigipass_client_id', '');
+  $post_data .= '&redirect_uri=' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)));
+  $post_data .= '&grant_type=authorization_code';
 
   $ch = curl_init($token_endpoint);
   curl_setopt($ch, CURLOPT_POST, 1);
@@ -449,7 +449,7 @@ function _mydigipass_callback_get_access_token_using_fsockopen($code) {
     $post_data = 'code=' . $code;
     $post_data .= '&client_secret=' . variable_get('mydigipass_client_secret', '');
     $post_data .= '&client_id=' . variable_get('mydigipass_client_id', '');
-    $post_data .= '&redirect_uri=' . url('mydigipass/callback', array('absolute' => TRUE));
+    $post_data .= '&redirect_uri=' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)));
     $post_data .= '&grant_type=authorization_code';
     $request = 'POST ' . $url['path'] . ' HTTP/1.0' . $crlf;
     $request .= 'Host: ' . $url['host'] . $crlf;
