@@ -4,6 +4,43 @@
  * Install, update, and uninstall functions for the mydigipass module.
  */
 
+ /**
+ * Implements hook_requirements().
+ */
+function mydigipass_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+  $title = $t('MYDIGIPASS.COM');
+
+  switch ($phase) {
+    case 'install':
+    case 'runtime':
+      if (in_array('curl', get_loaded_extensions())) {
+        $requirements['mydigipass'] = array(
+          'title' => $title,
+          'value' => $t('Functionality is available to make outbound connections.'),
+          'severity' => REQUIREMENT_OK,
+        );
+      }
+      elseif (function_exists('fsockopen') && in_array('openssl', get_loaded_extensions())) {
+        $requirements['mydigipass'] = array(
+          'title' => $title,
+          'value' => $t('Functionality is available to make outbound connections.'),
+          'severity' => REQUIREMENT_OK,
+        );
+      }
+      else {
+        $requirements['mydigipass'] = array(
+          'title' => $title,
+          'description' => $t('This PHP installation lacks the necessary functions to make outbound connections.'),
+          'severity' => REQUIREMENT_ERROR,
+        );
+      }
+      break;
+  }
+  return $requirements;
+}
+
 /**
  * Implements hook_install().
  */
