@@ -234,7 +234,7 @@ function _mydigipass_consume_authorisation_code($code) {
   }
 
   // Check if the UUID is present.
-  if (is_array($user_data) && isset($user_data['uuid']) && 
+  if (is_array($user_data) && isset($user_data['uuid']) &&
     !empty($user_data['uuid'])) {
     return $user_data;
   }
@@ -278,7 +278,7 @@ function _mydigipass_callback_get_access_token($code) {
 
   // Fail secure: set return value to FALSE.
   $return = FALSE;
-  
+
   switch ($result->code) {
     case 200:
     case 301:
@@ -286,6 +286,7 @@ function _mydigipass_callback_get_access_token($code) {
       $access_token_array = json_decode($result->data, TRUE);
       $return = $access_token_array['access_token'];
       break;
+
     default:
       watchdog('mydigipass', 'An error occured while contacting MYDIGIPASS.COM: "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
       drupal_set_message(t('An error occured while contacting MYDIGIPASS.COM.'));
@@ -320,12 +321,13 @@ function _mydigipass_callback_get_user_data($access_token) {
 
   // Fail secure: set return value to FALSE.
   $return = FALSE;
-  
+
   switch ($result->code) {
     case 200:
     case 301:
     case 302:
       $return = json_decode($result->data, TRUE);
+
       break;
     default:
       watchdog('mydigipass', 'An error occured while contacting MYDIGIPASS.COM: "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);

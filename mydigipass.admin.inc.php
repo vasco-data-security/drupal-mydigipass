@@ -115,78 +115,18 @@ function mydigipass_admin_settings($form_state) {
 function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state) {
   $url = 'https://www.mydigipass.com';
   $result = drupal_http_request($url);
-  
+
   switch ($result->code) {
     case 200:
     case 301:
     case 302:
       drupal_set_message(t('Connectivity test succeeded: this web server can contact MYDIGIPASS.COM.'));
       break;
+
     default:
       watchdog('mydigipass', 'Connectivity test failed due to "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
       drupal_set_message(t('Connectivity test failed due to "%error".', array('%error' => $result->code . ' ' . $result->error)));
   }
-  /*
-  if (in_array('curl', get_loaded_extensions())) {
-    drupal_set_message(t("The PHP cURL extension is installed on this server."));
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-    $data = curl_exec($ch);
-    $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    // Check the value of the returned HTTP Status Code.
-    if ($data === FALSE) {
-      drupal_set_message(t('An error occured while executing the curl_exec to the token endpoint: the error was %error', array('%error' => curl_error($ch))), 'error');
-    }
-    elseif ($http_status == 200) {
-      drupal_set_message(t('Connectivity test succeeded: this web server can contact MYDIGIPASS.COM.'));
-    }
-    else {
-      drupal_set_message(t('An error occured while contacting %url: the HTTP status code was %http_status', array('%http_status' => $http_status, '%url' => $url)), 'error');
-    }
-  }
-  elseif (function_exists('fsockopen') && in_array('openssl', get_loaded_extensions())) {
-    drupal_set_message(t("The PHP cURL extension is NOT installed, but the fsockopen function exists and OpenSSL is installed."));
-    $url = parse_url($url);
-    $fp = fsockopen('ssl://' . $url['host'], 443, $err_num, $err_msg, 30);
-    if ($fp === FALSE) {
-      drupal_set_message(t('An error occured while opening a socket using fsockopen: the error was %error', array('%error' => $err_msg)), 'error');
-    }
-    else {
-      $crlf = "\r\n";
-      fputs($fp, 'GET /' . $url['path'] . (isset($url['query']) ? '?' . $url['query'] : '') . ' HTTP/1.0' . $crlf);
-      fputs($fp, 'Host: ' . $url['host'] . $crlf);
-      fputs($fp, 'User-Agent: MYDIGIPASS.COM Drupal module' . $crlf);
-      fputs($fp, 'Connection: close'  . $crlf . $crlf);
-      while (!feof($fp)) {
-        $http_response .= fgets($fp, 128);
-      }
-      fclose($fp);
-      // Extract the HTTP status code.
-      $arr_http_response = explode($crlf . $crlf, $http_response, 2);
-      $http_status_array = explode(' ', $arr_http_response[0]);
-
-      if ($http_status_array[1] == '200') {
-        drupal_set_message(t('Connectivity test succeeded: this web server can contact MYDIGIPASS.COM.'));
-      }
-      else {
-        drupal_set_message(
-          t('An error occured while contacting %url: the HTTP status code was %http_status',
-            array(
-              '%http_status' => $http_status_array[1],
-              '%url' => $url,
-            )),
-          'error');
-      }
-    }
-  }
-  else {
-    drupal_set_message(t('This PHP installation lacks the necessary functions to make outbound connections.'), 'error');
-  }
-  */
 }
 
 /**
