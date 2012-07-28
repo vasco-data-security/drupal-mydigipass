@@ -327,8 +327,8 @@ function _mydigipass_callback_get_user_data($access_token) {
     case 301:
     case 302:
       $return = json_decode($result->data, TRUE);
-
       break;
+
     default:
       watchdog('mydigipass', 'An error occured while contacting MYDIGIPASS.COM: "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
       drupal_set_message(t('An error occured while contacting MYDIGIPASS.COM.'));
