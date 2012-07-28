@@ -461,7 +461,7 @@ function mydigipass_form_profile($edit, $account) {
     if ($user->uid == $account->uid) {
       $form['mydigipass'][] = array(
         '#type' => 'item',
-        '#value' => t('Click the following button to link your account with MYDIGIPASS.COM'),
+        '#value' => t('Click on the button below to secure your account with MYDIGIPASS.COM.'),
       );
 
       // Generate a random 32-char string. This string will be used as value

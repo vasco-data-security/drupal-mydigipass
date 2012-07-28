@@ -199,28 +199,8 @@ function mydigipass_callback() {
  *   An array containing the end-user data or FALSE in case an error occured.
  */
 function _mydigipass_consume_authorisation_code($code) {
-  // Determine whether curl is supported or whether we can use fsockopen.
-  if (in_array('curl', get_loaded_extensions())) {
-    $method = 'curl';
-  }
-  elseif (function_exists('fsockopen') &&
-          in_array('openssl', get_loaded_extensions())) {
-    $method = 'fsockopen';
-  }
-  else {
-    drupal_set_message(
-      t('This PHP installation lacks the necessary functions to make outbound connections.'),
-      'error');
-    watchdog(
-      'mydigipass',
-      'This PHP installation lacks the necessary functions to make outbound connections.',
-      array(),
-      WATCHDOG_ERROR);
-    return FALSE;
-  }
-
   // Step 1: exchange the authorisation code for an access token.
-  $access_token = ($method == 'curl' ? _mydigipass_callback_get_access_token_using_curl($code) : _mydigipass_callback_get_access_token_using_fsockopen($code));
+  $access_token = _mydigipass_callback_get_access_token($code);
 
   // Check if the function returned FALSE.
   if ($access_token === FALSE) {
@@ -244,7 +224,7 @@ function _mydigipass_consume_authorisation_code($code) {
   }
 
   // Step 2: exchange the access token for user data.
-  $user_data = ($method == 'curl' ? _mydigipass_callback_get_user_data_using_curl($access_token) : _mydigipass_callback_get_user_data_using_fsockopen($access_token));
+  $user_data = _mydigipass_callback_get_user_data($access_token);
 
   // Check if the function returned FALSE.
   if ($user_data === FALSE) {
@@ -254,7 +234,8 @@ function _mydigipass_consume_authorisation_code($code) {
   }
 
   // Check if the UUID is present.
-  if (is_array($user_data) && isset($user_data) && !empty($user_data)) {
+  if (is_array($user_data) && isset($user_data['uuid']) && 
+    !empty($user_data['uuid'])) {
     return $user_data;
   }
   else {
@@ -265,9 +246,6 @@ function _mydigipass_consume_authorisation_code($code) {
 /**
  * Helper function which exchanges the authorisation code for an access token.
  *
- * Exchanges the authorisation code for an access token and connects to
- * MYDIGIPASS.COM using the curl functions.
- *
  * @param string $code
  *   The authorisation code which was provided in the callback URL.
  *
@@ -275,7 +253,7 @@ function _mydigipass_consume_authorisation_code($code) {
  *   If no errors occured: a string containing the access token.
  *   If errors occured: FALSE
  */
-function _mydigipass_callback_get_access_token_using_curl($code) {
+function _mydigipass_callback_get_access_token($code) {
   // Get the URL of the token endpoint.
   $token_endpoint = _mydigipass_get_endpoint_url('token_endpoint');
 
@@ -286,68 +264,37 @@ function _mydigipass_callback_get_access_token_using_curl($code) {
   }
 
   // Exchange the authorisation code for an access token.
-  $post_data = 'code=' . $code;
-  $post_data .= '&client_secret=' . variable_get('mydigipass_client_secret', '');
-  $post_data .= '&client_id=' . variable_get('mydigipass_client_id', '');
-  $post_data .= '&redirect_uri=' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)));
-  $post_data .= '&grant_type=authorization_code';
+  $post_data = array(
+    'code' => $code,
+    'client_secret' => variable_get('mydigipass_client_secret', ''),
+    'client_id' => variable_get('mydigipass_client_id', ''),
+    'redirect_uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+    'grant_type' => 'authorization_code',
+  );
+  $request_data = http_build_query($post_data, '', '&');
+  $request_headers = array('Content-Type' => 'application/x-www-form-urlencoded');
 
-  $ch = curl_init($token_endpoint);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_HTTPPROXYTUNNEL, TRUE);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-  curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_setopt($ch, CURLOPT_CRLF, TRUE);
-  curl_setopt($ch, CURLOPT_USERAGENT, 'MYDIGIPASS.COM Drupal module');
-  // curl_setopt($ch, CURLOPT_PROXY, "http://proxy:8080");
-  // curl_setopt($ch, CURLOPT_PROXYPORT, 8080);
-  $data = curl_exec($ch);
-  $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  $result = drupal_http_request($token_endpoint, $request_headers, 'POST', $request_data);
 
-  // Set the return value to FALSE (fail secure).
+  // Fail secure: set return value to FALSE.
   $return = FALSE;
-
-  // Check if curl_exec returned no errors.
-  if ($data === FALSE) {
-    drupal_set_message(
-      t('An error occured while contacting MYDIGIPASS.COM.'),
-      'error');
-    watchdog(
-      'mydigipass',
-      'An error occured while executing the curl_exec to the token endpoint: the error was %error',
-      array('%error' => curl_error($ch)),
-      WATCHDOG_ERROR);
+  
+  switch ($result->code) {
+    case 200:
+    case 301:
+    case 302:
+      $access_token_array = json_decode($result->data, TRUE);
+      $return = $access_token_array['access_token'];
+      break;
+    default:
+      watchdog('mydigipass', 'An error occured while contacting MYDIGIPASS.COM: "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
+      drupal_set_message(t('An error occured while contacting MYDIGIPASS.COM.'));
   }
-  elseif ($http_status == 200) {
-    // The HTTP request resulted in a HTTP 200 OK response.
-    // Extract access token from JSON response.
-    $access_token_array = json_decode($data, TRUE);
-    $return = $access_token_array['access_token'];
-  }
-  else {
-    // MYDIGIPASS.COM did not return a status code 200, so something went
-    // wrong.
-    drupal_set_message(
-      t('An error occured while contacting MYDIGIPASS.COM.'),
-      'error');
-    watchdog(
-      'mydigipass',
-      'An error occured while contacting the token endpoint: the HTTP status code was %http_status',
-      array('%http_status' => $http_status),
-      WATCHDOG_ERROR);
-  }
-
-  curl_close($ch);
   return $return;
 }
 
 /**
  * Private helper function which exchanges the access token for the user data.
- *
- * Exchanges the access token for the user data and connects to MYDIGIPASS.COM
- * using the curl function.
  *
  * @param string $access_token
  *   The access token which was received from MYDIGIPASS.COM.
@@ -357,7 +304,7 @@ function _mydigipass_callback_get_access_token_using_curl($code) {
  *                         in 'attribute_name' => 'attribute_value' pairs.
  *   If errors occured: FALSE
  */
-function _mydigipass_callback_get_user_data_using_curl($access_token) {
+function _mydigipass_callback_get_user_data($access_token) {
   // Get the URL of the user data endpoint.
   $user_data_endpoint = _mydigipass_get_endpoint_url('data_endpoint');
 
@@ -367,219 +314,22 @@ function _mydigipass_callback_get_user_data_using_curl($access_token) {
     return array();
   }
 
+  $request_headers = array('Authorization' => 'Bearer ' . $access_token);
   // Call MYDIGIPASS.COM User Data Endpoint.
-  $ch = curl_init($user_data_endpoint);
-  curl_setopt($ch,
-    CURLOPT_HTTPHEADER,
-    array('Authorization: Bearer ' . $access_token));
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  // curl_setopt($ch, CURLOPT_PROXY, "http://proxy:8080");
-  // curl_setopt($ch, CURLOPT_PROXYPORT, 8080);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-  $data = curl_exec($ch);
-  $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  curl_close($ch);
+  $result = drupal_http_request($user_data_endpoint, $request_headers);
 
-  // Check the value of the returned HTTP Status Code.
-  if ($http_status == 200) {
-    // Extract user data.
-    $user_data_array = json_decode($data, TRUE);
-    return $user_data_array;
-  }
-  else {
-    // MYDIGIPASS.COM did not return a status code 200, so something is wrong.
-    drupal_set_message(
-      t('An error occured while contacting MYDIGIPASS.COM.'),
-      'error');
-    watchdog(
-      'mydigipass',
-      'An error occured while contacting the user data endpoint: the HTTP status code was %http_status',
-      array('%http_status' => $http_status),
-      WATCHDOG_ERROR);
-    return FALSE;
-  }
-}
-
-/**
- * Helper function which exchanges the authorisation code for an access token.
- *
- * Exchanges the authorisation code for an access token and connects to
- * MYDIGIPASS.COM using the fsockopen function.
- *
- * @param string $code
- *   The authorisation code which was provided in the callback URL
- *
- * @return string|bool
- *   If no errors occured: a string containing the access token.
- *   If errors occured: FALSE
- */
-function _mydigipass_callback_get_access_token_using_fsockopen($code) {
-  // Get the URL of the token endpoint.
-  $token_endpoint = _mydigipass_get_endpoint_url('token_endpoint');
-
-  // If either the authorisation code or the token endpoint URL is empty,
-  // return an empty string.
-  if (empty($code) || empty($token_endpoint)) {
-    return FALSE;
-  }
-
-  // Set the return value to FALSE. This ensures that this function only
-  // returns something when a socket could be opened and when the HTTP status
-  // code in the response is 200.
+  // Fail secure: set return value to FALSE.
   $return = FALSE;
-
-  // Open an SSL socket to MYDIGIPASS.COM using fsockopen.
-  $url = parse_url($token_endpoint);
-  $fp = fsockopen('ssl://' . $url['host'], 443, $err_num, $err_msg, 30);
-
-  // Check is an error occured (fsockopen() returns FALSE in case of errors).
-  if ($fp === FALSE) {
-    drupal_set_message(
-      t('An error occured while contacting MYDIGIPASS.COM.'),
-      'error');
-    watchdog(
-      'mydigipass',
-      'An error occured while opening a socket to the token endpoint using fsockopen: the error was %error',
-      array('%error' => $err_msg),
-      WATCHDOG_ERROR);
+  
+  switch ($result->code) {
+    case 200:
+    case 301:
+    case 302:
+      $return = json_decode($result->data, TRUE);
+      break;
+    default:
+      watchdog('mydigipass', 'An error occured while contacting MYDIGIPASS.COM: "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
+      drupal_set_message(t('An error occured while contacting MYDIGIPASS.COM.'));
   }
-  else {
-    // Create the POST request.
-    $crlf = "\r\n";
-    $post_data = 'code=' . $code;
-    $post_data .= '&client_secret=' . variable_get('mydigipass_client_secret', '');
-    $post_data .= '&client_id=' . variable_get('mydigipass_client_id', '');
-    $post_data .= '&redirect_uri=' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)));
-    $post_data .= '&grant_type=authorization_code';
-    $request = 'POST ' . $url['path'] . ' HTTP/1.0' . $crlf;
-    $request .= 'Host: ' . $url['host'] . $crlf;
-    $request .= 'User-Agent: MYDIGIPASS.COM Drupal module' . $crlf;
-    $request .= 'Content-Type: application/x-www-form-urlencoded' . $crlf;
-    $request .= 'Content-Length: ' . drupal_strlen($post_data) . $crlf . $crlf;
-    $request .= $post_data;
-
-    // Send the request and collect the response.
-    fputs($fp, $request);
-    $http_response = '';
-    while (!feof($fp)) {
-      $http_response .= fgets($fp, 128);
-    }
-    fclose($fp);
-
-    // Extract the HTTP status code.
-    $arr_http_response = explode($crlf . $crlf, $http_response, 2);
-    $http_status_array = explode(' ', $arr_http_response[0]);
-
-    if ($http_status_array[1] == '200') {
-      // The HTTP request resulted in a HTTP 200 OK response.
-      // The HTTP response is the full response including the headers, so
-      // extract the response body.
-      $arr_http_response = explode($crlf . $crlf, $http_response);
-      $access_token_array = json_decode($arr_http_response[1], TRUE);
-      $return = $access_token_array['access_token'];
-    }
-    else {
-      // MYDIGIPASS.COM did not return a status code 200, so something went
-      // wrong.
-      drupal_set_message(
-        t('An error occured while contacting MYDIGIPASS.COM.'),
-        'error');
-      watchdog(
-        'mydigipass',
-        'An error occured while contacting the token endpoint: the HTTP status code was %http_status',
-        array('%http_status' => $http_status_array[1]),
-        WATCHDOG_ERROR);
-    }
-  }
-
   return $return;
-}
-
-/**
- * Private helper function which exchanges the access token for the user data.
- *
- * Exchanges the access token for the user data and connects to MYDIGIPASS.COM
- * using the fsockopen function.
- *
- * @param string $access_token
- *   The access token which was received from MYDIGIPASS.COM
- *
- * @return array|bool
- *   If no errors occured: An associative array which contains the user data
- *                         in 'attribute_name' => 'attribute_value' pairs.
- *   If errors occured: FALSE
- */
-function _mydigipass_callback_get_user_data_using_fsockopen($access_token) {
-  // Get the URL of the user data endpoint.
-  $user_data_endpoint = _mydigipass_get_endpoint_url('data_endpoint');
-
-  // If either the access token or the user data endpoint URL is empty, return
-  // an empty array.
-  if (empty($access_token) || empty($user_data_endpoint)) {
-    return FALSE;
-  }
-
-  // Set the return value to FALSE. This ensures that this function only
-  // returns something when a socket could be opened and when the HTTP status
-  // code in the response is 200.
-  $return = FALSE;
-
-  // Open an SSL socket to MYDIGIPASS.COM using fsockopen.
-  $url = parse_url($user_data_endpoint);
-  $fp = fsockopen('ssl://' . $url['host'], 443, $err_num, $err_msg, 30);
-
-  // Check is an error occured (fsockopen() returns FALSE in case of errors).
-  if ($fp === FALSE) {
-    drupal_set_message(
-      t('An error occured while contacting MYDIGIPASS.COM.'),
-      'error');
-    watchdog(
-      'mydigipass',
-      'An error occured while opening a socket to the user data endpoint using fockopen: the error was %error',
-      array('%error' => $err_msg),
-      WATCHDOG_ERROR);
-  }
-  else {
-    // Create the GET request.
-    $crlf = "\r\n";
-    $request = 'GET ' . $url['path'] . ' HTTP/1.0' . $crlf;
-    $request .= 'Host: ' . $url['host'] . $crlf;
-    $request .= 'Authorization: Bearer ' . $access_token . $crlf;
-    $request .= 'User-Agent: MYDIGIPASS.COM Drupal module' . $crlf;
-    $request .= $crlf;
-
-    // Send the request and collect the response.
-    fputs($fp, $request);
-    $http_response = '';
-    while (!feof($fp)) {
-      $http_response .= fgets($fp, 128);
-    }
-    fclose($fp);
-
-    // Extract the HTTP status code.
-    $arr_http_response = explode($crlf . $crlf, $http_response, 2);
-    $http_status_array = explode(' ', $arr_http_response[0]);
-
-    if ($http_status_array[1] == '200') {
-      // The HTTP request resulted in a HTTP 200 OK response.
-      // The HTTP response is the full response including the headers, so
-      // extract the response body.
-      $arr_http_response = explode($crlf . $crlf, $http_response);
-      $result = json_decode($arr_http_response[1], TRUE);
-    }
-    else {
-      // MYDIGIPASS.COM did not return a status code 200, so something went
-      // wrong.
-      drupal_set_message(
-        t('An error occured while contacting MYDIGIPASS.COM.'),
-        'error');
-      watchdog(
-        'mydigipass',
-        'An error occured while contacting the user data endpoint: the HTTP status code was %http_status',
-        array('%http_status' => $http_status_array[1]),
-        WATCHDOG_ERROR);
-    }
-  }
-
-  return $result;
 }

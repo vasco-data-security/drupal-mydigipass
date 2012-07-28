@@ -114,6 +114,19 @@ function mydigipass_admin_settings($form_state) {
  */
 function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state) {
   $url = 'https://www.mydigipass.com';
+  $result = drupal_http_request($url);
+  
+  switch ($result->code) {
+    case 200:
+    case 301:
+    case 302:
+      drupal_set_message(t('Connectivity test succeeded: this web server can contact MYDIGIPASS.COM.'));
+      break;
+    default:
+      watchdog('mydigipass', 'Connectivity test failed due to "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
+      drupal_set_message(t('Connectivity test failed due to "%error".', array('%error' => $result->code . ' ' . $result->error)));
+  }
+  /*
   if (in_array('curl', get_loaded_extensions())) {
     drupal_set_message(t("The PHP cURL extension is installed on this server."));
 
@@ -173,6 +186,7 @@ function mydigipass_admin_settings_submit_test_connectivity($form, &$form_state)
   else {
     drupal_set_message(t('This PHP installation lacks the necessary functions to make outbound connections.'), 'error');
   }
+  */
 }
 
 /**

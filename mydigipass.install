@@ -15,14 +15,7 @@ function mydigipass_requirements($phase) {
   switch ($phase) {
     case 'install':
     case 'runtime':
-      if (in_array('curl', get_loaded_extensions())) {
-        $requirements['mydigipass'] = array(
-          'title' => $title,
-          'value' => $t('Functionality is available to make outbound connections.'),
-          'severity' => REQUIREMENT_OK,
-        );
-      }
-      elseif (function_exists('fsockopen') && in_array('openssl', get_loaded_extensions())) {
+      if (function_exists('fsockopen') && in_array('openssl', get_loaded_extensions())) {
         $requirements['mydigipass'] = array(
           'title' => $title,
           'value' => $t('Functionality is available to make outbound connections.'),
