@@ -16,7 +16,7 @@ function mydigipass_callback() {
   // Check whether the client_secret and client_id have been set.
   $client_secret = variable_get('mydigipass_client_secret', '');
   $client_id = variable_get('mydigipass_client_id', '');
-  if (empty($client_secret) || empty($client_secret)) {
+  if (empty($client_secret) || empty($client_id)) {
     drupal_set_message(
       t('The MYDIGIPASS.COM module has not been correctly configured on this Drupal installation. Either the client_id or the client_secret has not been properly configured.'),
       'error');

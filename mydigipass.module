@@ -100,8 +100,6 @@ function mydigipass_init() {
  * Implements hook_form_alter().
  */
 function mydigipass_form_alter(&$form, $form_state, $form_id) {
-  global $user;
-
   switch ($form_id) {
     // The standard login form.
     case 'user_login_block':
@@ -631,8 +629,6 @@ function mydigipass_link_user_form_submit($form, &$form_state) {
  * @see mydigipass_form_alter()
  */
 function mydigipass_link_new_user() {
-  $output = '';
-
   if (user_register_access()) {
     $output = t('Complete this form to create a new account on this website to link it to your MYDIGIPASS.COM account.');
     $output .= drupal_get_form('mydigipass_user_register');
@@ -656,8 +652,6 @@ function mydigipass_link_new_user() {
  * @see mydigipass_form_alter()
  */
 function mydigipass_link_existing_user() {
-  $output = '';
-
   $output = t('Complete this form if you already have an account on this website. Enter your credentials to link this account to MYDIGIPASS.COM. As soon as your account is linked, you will be able to log in to this site with your MYDIGIPASS.COM authenticator.');
   $output .= drupal_get_form('mydigipass_user_login');
 
