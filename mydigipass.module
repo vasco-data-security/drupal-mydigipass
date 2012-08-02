@@ -91,6 +91,10 @@ function mydigipass_perm() {
 
 /**
  * Implements hook_init().
+ *
+ * It is necessary to add the javascript using hook_init() and not with
+ * drupal_add_js() since the javascript is a javascript file which has to be
+ * loaded from a third party website.
  */
 function mydigipass_init() {
   drupal_set_html_head('<script type="text/javascript" src="' . _mydigipass_get_endpoint_url('dp_connect.js') . '"></script>');
@@ -107,7 +111,18 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       // Add the MYDIGIPASS.COM button.
       $form['account']['mydigipass'] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))) . '" data-style="' . variable_get('mydigipass_login_form_style', 'default') . '" data-text="' . variable_get('mydigipass_login_form_text', 'secure-login') . '" data-help="' . variable_get('mydigipass_login_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => l(t('Connect with MYDIGIPASS.COM'), '', array(
+          'fragment' => ' ',
+          'external' => TRUE,
+          'attributes' => array(
+            'class' => 'dpplus-connect',
+            'data-client-id' => variable_get('mydigipass_client_id', ''),
+            'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-style' => variable_get('mydigipass_login_form_style', 'default'),
+            'data-text' => variable_get('mydigipass_login_form_text', 'secure-login'),
+            'data-help' => variable_get('mydigipass_login_form_help', 'true'),
+          ),
+        ))
       );
       // Add mydigipass_enforce_authentication_mode_during_login as first
       // validation handler.
@@ -125,7 +140,19 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     case 'user_register':
       $form['mydigipass'] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))) . '" data-state="register" data-style="' . variable_get('mydigipass_register_form_style', 'large') . '" data-text="' . variable_get('mydigipass_register_form_text', 'sign-up') . '" data-help="' . variable_get('mydigipass_register_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => l(t('Connect with MYDIGIPASS.COM'), '', array(
+          'fragment' => ' ',
+          'external' => TRUE,
+          'attributes' => array(
+            'class' => 'dpplus-connect',
+            'data-client-id' => variable_get('mydigipass_client_id', ''),
+            'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-state' => 'register',
+            'data-style' => variable_get('mydigipass_register_form_style', 'large'),
+            'data-text' => variable_get('mydigipass_register_form_text', 'sign-up'),
+            'data-help' => variable_get('mydigipass_login_form_help', 'true'),
+          ),
+        ))
       );
       break;
 
@@ -149,8 +176,8 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       $sql = "SELECT attribute_value FROM {mydigipass_user_data} "
         . "WHERE mdp_uuid = '%s' AND attribute_key = 'email'";
       $mdp_email = db_result(db_query($sql, $uuid));
-      $form['mail']['#default_value'] = $mdp_email;
-      $form['name']['#default_value'] = $mdp_email;
+      $form['mail']['#default_value'] = check_plain($mdp_email);
+      $form['name']['#default_value'] = check_plain($mdp_email);
       // Currently the password field is hidden and its value is also set to
       // 'hidden'. This is not an issue since a random password is created and
       // stored when the user is effectively created. It must be done this way
@@ -216,8 +243,8 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
           $account->content['mydigipass_user_data'][$row->attribute_key] = array(
             '#type' => 'user_profile_item',
             '#title' => t($row->attribute_key),
-            '#value' => $row->attribute_value,
-            '#attributes' => array('class' => 'profile-' . $row->attribute_key),
+            '#value' => check_plain($row->attribute_value),
+            '#attributes' => array('class' => 'profile-' . check_plain($row->attribute_key)),
           );
         }
       }
@@ -472,7 +499,19 @@ function mydigipass_form_profile($edit, $account) {
       // The MYDIGIPASS.COM button also contains the data-state parameter.
       $form['mydigipass'][] = array(
         '#type' => 'item',
-        '#value' => '<a class="dpplus-connect" data-client-id="' . variable_get('mydigipass_client_id', '') . '" data-redirect-uri="' . variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))) . '" data-state="' . $_SESSION['mydigipass_link_code'] . '" data-style="' . variable_get('mydigipass_link_form_style', 'large') . '" data-text="' . variable_get('mydigipass_link_form_text', 'connect') . '" data-help="' . variable_get('mydigipass_link_form_help', 'true') . '" href="#">Connect with MYDIGIPASS.COM</a>',
+        '#value' => l(t('Connect with MYDIGIPASS.COM'), '', array(
+          'fragment' => ' ',
+          'external' => TRUE,
+          'attributes' => array(
+            'class' => 'dpplus-connect',
+            'data-client-id' => variable_get('mydigipass_client_id', ''),
+            'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-state' => $_SESSION['mydigipass_link_code'],
+            'data-style' => variable_get('mydigipass_link_form_style', 'large'),
+            'data-text' => variable_get('mydigipass_link_form_text', 'connect'),
+            'data-help' => variable_get('mydigipass_login_form_help', 'true'),
+          ),
+        ))
       );
     }
     else {
