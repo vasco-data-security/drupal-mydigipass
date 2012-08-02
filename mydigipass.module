@@ -407,7 +407,7 @@ function mydigipass_link_user_to_new_user($form, &$form_state) {
   $user->mail = $form_state['values']['mail'];
 
   // Link the new user to MYDIGIPASS.COM
-  mydigipass_link_user_to_logged_on_user($form, &$form_state);
+  mydigipass_link_user_to_logged_on_user($form, $form_state);
 
   // Check whether administrator approval is needed.
   if (variable_get('user_register', 1) == 1) {
