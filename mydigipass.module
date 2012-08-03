@@ -129,14 +129,14 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       );
       // Add mydigipass_enforce_authentication_mode_during_login as first
       // validation handler.
-      $form['#validate'] = array_merge(array('mydigipass_enforce_authentication_mode_during_login'), $form['#validate']);
+      array_unshift($form['#validate'], 'mydigipass_enforce_authentication_mode_during_login');
       break;
 
     // The form which allows to reset your password.
     case 'user_pass':
       // Add mydigipass_enforce_authentication_mode_during_password_reset as
       // first validation handler.
-      $form['#validate'] = array_merge(array('mydigipass_enforce_authentication_mode_during_password_reset'), $form['#validate']);
+      array_unshift($form['#validate'], 'mydigipass_enforce_authentication_mode_during_password_reset');
       break;
 
     // The standard user registration form.
