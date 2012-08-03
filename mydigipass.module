@@ -98,7 +98,7 @@ function mydigipass_perm() {
  */
 function mydigipass_init() {
   $endpoint = _mydigipass_get_endpoint_url('dp_connect.js');
-  if (! empty($endpoint)) {
+  if (!empty($endpoint)) {
     drupal_set_html_head('<script type="text/javascript" src="' . $endpoint . '"></script>');
   }
 }
