@@ -62,6 +62,7 @@ function mydigipass_uninstall() {
   variable_del('mydigipass_register_form_help');
   variable_del('mydigipass_register_form_style');
   variable_del('mydigipass_register_form_text');
+  variable_del('mydigipass_integration_enabled');
 }
 
 /**

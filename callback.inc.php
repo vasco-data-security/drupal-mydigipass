@@ -13,6 +13,15 @@ function mydigipass_callback() {
   // an error occurs while the function is being executed.
   $return_or_error = t('An error occured while contacting MYDIGIPASS.COM. Please try again. If the problem persists, contact your site administrator.');
 
+  // Check if the integration is enabled. When integration is not enabled, a
+  // user could arrive at the callback page when using the single sign-on
+  // functionality on the MYDIGIPASS.COM dashboard.
+  if (variable_get('mydigipass_integration_enabled', 0) == 0) {
+    drupal_set_message(
+      t('The integration with MYDIGIPASS.COM has been disabled on this website. It is not possible to logon using MYDIGIPASS.COM.'),
+      'error');
+  }
+
   // Check whether the client_secret and client_id have been set.
   $client_secret = variable_get('mydigipass_client_secret', '');
   $client_id = variable_get('mydigipass_client_id', '');

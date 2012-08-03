@@ -97,9 +97,12 @@ function mydigipass_perm() {
  * loaded from a third party website.
  */
 function mydigipass_init() {
-  $endpoint = _mydigipass_get_endpoint_url('dp_connect.js');
-  if (!empty($endpoint)) {
-    drupal_set_html_head('<script type="text/javascript" src="' . $endpoint . '"></script>');
+  // Check if the integration has been enabled.
+  if (variable_get('mydigipass_integration_enabled', 0) == 1) {
+    $endpoint = _mydigipass_get_endpoint_url('dp_connect.js');
+    if (!empty($endpoint)) {
+      drupal_set_html_head('<script type="text/javascript" src="' . $endpoint . '"></script>');
+    }
   }
 }
 
@@ -107,6 +110,11 @@ function mydigipass_init() {
  * Implements hook_form_alter().
  */
 function mydigipass_form_alter(&$form, $form_state, $form_id) {
+  // If the integration is not enabled, don't alter any forms.
+  if (variable_get('mydigipass_integration_enabled', 0) == 0) {
+    return;
+  }
+
   switch ($form_id) {
     // The standard login form.
     case 'user_login_block':
@@ -213,6 +221,14 @@ function mydigipass_forms() {
  * Implements hook_user().
  */
 function mydigipass_user($op, &$edit, &$account, $category = NULL) {
+  // Don't do anything if the integration is not enabled, unless $op is set to
+  // 'delete'. When set to delete, personal data must also be deleted even if
+  // the integration is (temporarily) disabled.
+  if ((variable_get('mydigipass_integration_enabled', 0) == 0) &&
+    ($op != 'delete')) {
+    return;
+  }
+
   switch ($op) {
     case 'view':
       // Check if the user is linked to a MYDIGIPASS.COM account.

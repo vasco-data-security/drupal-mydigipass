@@ -20,6 +20,12 @@
 function mydigipass_admin_settings($form_state) {
   $form = array();
 
+  $form['mydigipass_integration_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable MYDIGIPASS.COM integration'),
+    '#default_value' => variable_get('mydigipass_integration_enabled', 0),
+  );
+
   $form['account_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Account settings'),
