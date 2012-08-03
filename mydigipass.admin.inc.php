@@ -187,7 +187,7 @@ function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form
   $success = TRUE;
 
   // Delete the previous stored setting.
-  $sql = 'DELETE FROM {mydigipass_profile_fields}';
+  $sql = 'TRUNCATE TABLE {mydigipass_profile_fields}';
   db_query($sql);
 
   // Store the selected attribute names in the database.
@@ -195,7 +195,7 @@ function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form
 
   foreach ($user_data_fields as $key => $value) {
     if ($key === $value) {
-      $success &= db_query($sql, $value);
+      $success = db_query($sql, $value) && $success;
     }
   }
   if ($success) {

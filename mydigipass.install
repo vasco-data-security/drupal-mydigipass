@@ -85,6 +85,9 @@ function mydigipass_schema() {
       ),
     ),
     'primary key' => array('mdp_uuid'),
+    'unique keys' => array(
+      'drupal_uid' => array('drupal_uid'),
+    ),
   );
 
   $schema['mydigipass_profile_fields'] = array(

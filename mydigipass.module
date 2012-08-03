@@ -97,7 +97,10 @@ function mydigipass_perm() {
  * loaded from a third party website.
  */
 function mydigipass_init() {
-  drupal_set_html_head('<script type="text/javascript" src="' . _mydigipass_get_endpoint_url('dp_connect.js') . '"></script>');
+  $endpoint = _mydigipass_get_endpoint_url('dp_connect.js');
+  if (! empty($endpoint)) {
+    drupal_set_html_head('<script type="text/javascript" src="' . $endpoint . '"></script>');
+  }
 }
 
 /**
@@ -178,12 +181,9 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       $mdp_email = db_result(db_query($sql, $uuid));
       $form['mail']['#default_value'] = check_plain($mdp_email);
       $form['name']['#default_value'] = check_plain($mdp_email);
-      // Currently the password field is hidden and its value is also set to
-      // 'hidden'. This is not an issue since a random password is created and
-      // stored when the user is effectively created. It must be done this way
-      // since the validation handler expect a value is set for the pass field.
-      $form['pass']['#type'] = 'hidden';
-      $form['pass']['#value'] = 'hidden';
+      // The value of the password doesn't really matter since a random
+      // password is created and stored when the user is effectively created.
+      $form['pass']['#type'] = 'value';
 
       // Change the text on the submit button.
       $form['submit']['#value'] = t('Create new account and link to MYDIGIPASS.COM');
@@ -216,7 +216,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
   switch ($op) {
     case 'view':
       // Check if the user is linked to a MYDIGIPASS.COM account.
-      $sql = 'SELECT COUNT(*) FROM {mydigipass_user_link} WHERE drupal_uid = %d';
+      $sql = 'SELECT 1 FROM {mydigipass_user_link} WHERE drupal_uid = %d';
       $result = db_result(db_query($sql, $account->uid));
       if ($result == 1) {
         // The user is linked to a MYDIGIPASS.COM account, so extract the email
@@ -287,10 +287,10 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
       // is not allowed. An occasion in which this may occur is if the user
       // received an email with a one-time login URL.
       if (variable_get('mydigipass_authentication_mode', 'mdp_only') == 'mdp_only') {
-        $sql = "SELECT count(*) FROM {mydigipass_user_link} UL WHERE UL.drupal_uid = %d";
+        $sql = "SELECT 1 FROM {mydigipass_user_link} UL WHERE UL.drupal_uid = %d";
         $result = db_result(db_query($sql, $account->uid));
 
-        if (($result > 0) && empty($_SESSION['mydigipass_uuid'])) {
+        if (($result == 1) && empty($_SESSION['mydigipass_uuid'])) {
           global $user;
           // Load the anonymous user.
           $user = drupal_anonymous_user();
@@ -331,10 +331,10 @@ function mydigipass_register_user_validate_email($form, &$form_state) {
  */
 function mydigipass_enforce_authentication_mode_during_login($form, &$form_state) {
   if (variable_get('mydigipass_authentication_mode', 'mdp_only') == 'mdp_only') {
-    $sql = "SELECT COUNT(*) FROM {mydigipass_user_link} UL, {users} U WHERE U.uid = UL.drupal_uid AND U.name = '%s'";
+    $sql = "SELECT 1 FROM {mydigipass_user_link} UL, {users} U WHERE U.uid = UL.drupal_uid AND U.name = '%s'";
     $result = db_result(db_query($sql, $form_state['values']['name']));
 
-    if ($result > 0) {
+    if ($result == 1) {
       form_set_error('name', t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM."));
     }
   }
@@ -350,10 +350,10 @@ function mydigipass_enforce_authentication_mode_during_login($form, &$form_state
  */
 function mydigipass_enforce_authentication_mode_during_password_reset($form, &$form_state) {
   if (variable_get('mydigipass_authentication_mode', 'mdp_only') == 'mdp_only') {
-    $sql = "SELECT COUNT(*) FROM {mydigipass_user_link} UL, {users} U WHERE U.uid = UL.drupal_uid AND (U.name = '%s' OR U.mail = '%s')";
+    $sql = "SELECT 1 FROM {mydigipass_user_link} UL, {users} U WHERE U.uid = UL.drupal_uid AND (U.name = '%s' OR U.mail = '%s')";
     $result = db_result(db_query($sql, trim($form_state['values']['name']), trim($form_state['values']['name'])));
 
-    if ($result > 0) {
+    if ($result == 1) {
       form_set_error('name', t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM. As such you cannot use the password reset functionality."));
     }
   }
@@ -456,7 +456,7 @@ function mydigipass_form_profile($edit, $account) {
   );
 
   // Check if the user is linked to a MYDIGIPASS.COM account.
-  $sql = 'SELECT COUNT(*) FROM {mydigipass_user_link} WHERE drupal_uid = %d';
+  $sql = 'SELECT 1 FROM {mydigipass_user_link} WHERE drupal_uid = %d';
   $result = db_result(db_query($sql, $account->uid));
   if ($result == 1) {
     // The user is linked with a MYDIGIPASS.COM account.

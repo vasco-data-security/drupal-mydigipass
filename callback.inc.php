@@ -112,7 +112,7 @@ function mydigipass_callback() {
 
   // At this point, the end-user has authenticated himself to MYDIGIPASS.COM.
   // Check whether this end-user is already linked to a Drupal user.
-  $sql = "SELECT count(*) FROM {mydigipass_user_link} WHERE mdp_uuid = '%s'";
+  $sql = "SELECT 1 FROM {mydigipass_user_link} WHERE mdp_uuid = '%s'";
   $result = db_result(db_query($sql, $user_data_array['uuid']));
 
   if ($result == 1) {
