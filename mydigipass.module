@@ -187,8 +187,8 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       $sql = "SELECT attribute_value FROM {mydigipass_user_data} "
         . "WHERE mdp_uuid = '%s' AND attribute_key = 'email'";
       $mdp_email = db_result(db_query($sql, $uuid));
-      $form['mail']['#default_value'] = check_plain($mdp_email);
-      $form['name']['#default_value'] = check_plain($mdp_email);
+      $form['mail']['#default_value'] = $mdp_email;
+      $form['name']['#default_value'] = $mdp_email;
       // The value of the password doesn't really matter since a random
       // password is created and stored when the user is effectively created.
       $form['pass']['#type'] = 'value';
