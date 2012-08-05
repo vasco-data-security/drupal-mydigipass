@@ -66,14 +66,14 @@ function mydigipass_menu() {
   );
 
   $items['mydigipass/link/new_user'] = array(
-    'title' => 'Create new account',
+    'title' => 'Link to new account',
     'page callback' => 'mydigipass_link_new_user',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
 
   $items['mydigipass/link/existing_user'] = array(
-    'title' => 'Register new user',
+    'title' => 'Link to existing user',
     'page callback' => 'mydigipass_link_existing_user',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -97,7 +97,7 @@ function mydigipass_perm() {
  * loaded from a third party website.
  */
 function mydigipass_init() {
-  // Check if the integration has been enabled.
+  // Only include if the integration has been enabled.
   if (variable_get('mydigipass_integration_enabled', 0) == 1) {
     $endpoint = _mydigipass_get_endpoint_url('dp_connect.js');
     if (!empty($endpoint)) {
@@ -252,7 +252,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
           '#title' => t('MYDIGIPASS.COM user data'),
           '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
         );
-        $sql = "SELECT * FROM {mydigipass_user_link} UL, {mydigipass_user_data} UD WHERE UL.drupal_uid = %d AND UL.mdp_uuid = UD.mdp_uuid AND UD.attribute_key IN (SELECT name FROM {mydigipass_profile_fields}) ORDER BY UD.attribute_key";
+        $sql = "SELECT * FROM {mydigipass_user_link} UL LEFT JOIN {mydigipass_user_data} UD ON UL.mdp_uuid = UD.mdp_uuid LEFT JOIN {mydigipass_profile_fields} PF ON PF.name = UD.attribute_key WHERE UL.drupal_uid = %d AND PF.name IS NOT NULL ORDER BY UD.attribute_key";
         $result = db_query($sql, $account->uid);
 
         while ($row = db_fetch_object($result)) {
@@ -566,7 +566,6 @@ function mydigipass_form_profile_unlink($form, &$form_state) {
   else {
     drupal_set_message(t('An error occured while unlinking the account from MYDIGIPASS.COM', 'error'));
   }
-
 }
 
 /**

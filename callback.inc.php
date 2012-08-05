@@ -178,7 +178,7 @@ function mydigipass_callback() {
       return;
     }
     else {
-      // Show the mydigipass_login_form and mydigipass_user_register.
+      // Show the link user wizard or the mydigipass_user_register form.
       if ($state == 'register') {
         drupal_goto('mydigipass/link/new_user');
       }
