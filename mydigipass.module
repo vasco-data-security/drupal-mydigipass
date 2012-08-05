@@ -627,27 +627,38 @@ function _mydigipass_get_endpoint_url($endpoint) {
 function mydigipass_link_user_form() {
   $form = array();
 
-  $form[] = array(
-    '#type' => 'item',
-    '#value' => t("Your MYDIGIPASS.COM account is not yet linked to a user account on this website. If you already have a user account on this website, you can link it to your MYDIGIPASS.COM account. If you don't have a user account yet, create one and it will be linked to your MYDIGIPASS.COM account."),
-  );
+  // Check if the integration is enabled. When integration is not enabled, a
+  // user could arrive at the callback page when forcefully browsing to
+  // the 'mydigipass/link' page.
+  if (variable_get('mydigipass_integration_enabled', 0) == 0) {
+    $form[] = array(
+      '#type' => 'item',
+      '#value' => t('The integration with MYDIGIPASS.COM has been disabled on this website.'),
+    );
+  }
+  else {
+    $form[] = array(
+      '#type' => 'item',
+      '#value' => t("Your MYDIGIPASS.COM account is not yet linked to a user account on this website. If you already have a user account on this website, you can link it to your MYDIGIPASS.COM account. If you don't have a user account yet, create one and it will be linked to your MYDIGIPASS.COM account."),
+    );
 
-  $scenarios = array(
-    'new_user' => t("I don't have a user account yet on this website. I want to create one and link it to my MYDIGIPASS.COM account."),
-    'existing_user' => t("I already have a user account on this website. I want to link it to my MYDIGIPASS.COM account."),
-  );
+    $scenarios = array(
+      'new_user' => t("I don't have a user account yet on this website. I want to create one and link it to my MYDIGIPASS.COM account."),
+      'existing_user' => t("I already have a user account on this website. I want to link it to my MYDIGIPASS.COM account."),
+    );
 
-  $form['scenario'] = array(
-    '#type' => 'radios',
-    '#title' => t('Select one of the following options'),
-    '#required' => TRUE,
-    '#options' => $scenarios,
-  );
+    $form['scenario'] = array(
+      '#type' => 'radios',
+      '#title' => t('Select one of the following options'),
+      '#required' => TRUE,
+      '#options' => $scenarios,
+    );
 
-  $form[] = array(
-    '#type' => 'submit',
-    '#value' => t('Continue'),
-  );
+    $form[] = array(
+      '#type' => 'submit',
+      '#value' => t('Continue'),
+    );
+  }
 
   return $form;
 }
@@ -671,8 +682,9 @@ function mydigipass_link_user_form_submit($form, &$form_state) {
 }
 
 /**
- * Second page in the wizard to link a Drupal user to MYDIGIPASS.COM.
+ * Page callback for 'mydigipass/link/new_user'.
  *
+ * Second page in the wizard to link a Drupal user to MYDIGIPASS.COM.
  * This function checks whether it is allowed to create new user accounts on
  * the website. If not, then an error message is returned. If it is allowed,
  * then a form which resembles the user registration form is returned.
@@ -684,20 +696,29 @@ function mydigipass_link_user_form_submit($form, &$form_state) {
  * @see mydigipass_form_alter()
  */
 function mydigipass_link_new_user() {
-  if (user_register_access()) {
-    $output = t('Complete this form to create a new account on this website to link it to your MYDIGIPASS.COM account.');
-    $output .= drupal_get_form('mydigipass_user_register');
+  // Check if the integration is enabled. When integration is not enabled, a
+  // user could arrive at the callback page when forcefully browsing to
+  // the 'mydigipass/link/new_user' page.
+  if (variable_get('mydigipass_integration_enabled', 0) == 0) {
+    $output = t('The integration with MYDIGIPASS.COM has been disabled on this website.');
   }
   else {
-    $output = t("According to this website's policy it is not allowed to create new accounts.");
+    if (user_register_access()) {
+      $output = t('Complete this form to create a new account on this website to link it to your MYDIGIPASS.COM account.');
+      $output .= drupal_get_form('mydigipass_user_register');
+    }
+    else {
+      $output = t("According to this website's policy it is not allowed to create new accounts.");
+    }
   }
 
   return $output;
 }
 
 /**
- * Second page in the wizard to link a Drupal user to MYDIGIPASS.COM.
+ * Page callback for 'mydigipass/link/existing_user'.
  *
+ * Second page in the wizard to link a Drupal user to MYDIGIPASS.COM.
  * This function returns a form which resembles the user login form.
  * Using hook_form_alter an additional submit handler is added to the form
  * which causes that the existing  user is linked to the MYDIGIPASS.COM
@@ -707,8 +728,16 @@ function mydigipass_link_new_user() {
  * @see mydigipass_form_alter()
  */
 function mydigipass_link_existing_user() {
-  $output = t('Complete this form if you already have an account on this website. Enter your credentials to link this account to MYDIGIPASS.COM. As soon as your account is linked, you will be able to log in to this site with your MYDIGIPASS.COM authenticator.');
-  $output .= drupal_get_form('mydigipass_user_login');
+  // Check if the integration is enabled. When integration is not enabled, a
+  // user could arrive at the callback page when forcefully browsing to
+  // the 'mydigipass/link/existing_user' page.
+  if (variable_get('mydigipass_integration_enabled', 0) == 0) {
+    $output = t('The integration with MYDIGIPASS.COM has been disabled on this website.');
+  }
+  else {
+    $output = t('Complete this form if you already have an account on this website. Enter your credentials to link this account to MYDIGIPASS.COM. As soon as your account is linked, you will be able to log in to this site with your MYDIGIPASS.COM authenticator.');
+    $output .= drupal_get_form('mydigipass_user_login');
+  }
 
   return $output;
 }
