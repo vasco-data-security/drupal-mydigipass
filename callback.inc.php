@@ -15,11 +15,10 @@ function mydigipass_callback() {
 
   // Check if the integration is enabled. When integration is not enabled, a
   // user could arrive at the callback page when using the single sign-on
-  // functionality on the MYDIGIPASS.COM dashboard.
+  // functionality on the MYDIGIPASS.COM dashboard or when forcefully browsing
+  // to 'mydigipass/callback'.
   if (variable_get('mydigipass_integration_enabled', 0) == 0) {
-    drupal_set_message(
-      t('The integration with MYDIGIPASS.COM has been disabled on this website. It is not possible to logon using MYDIGIPASS.COM.'),
-      'error');
+    return t('The integration with MYDIGIPASS.COM has been disabled on this website. It is not possible to logon using MYDIGIPASS.COM.');
   }
 
   // Check whether the client_secret and client_id have been set.
