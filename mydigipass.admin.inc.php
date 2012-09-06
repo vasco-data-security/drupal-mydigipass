@@ -71,7 +71,7 @@ function mydigipass_admin_settings($form_state) {
     '#type' => 'textfield',
     '#title' => t('Callback URL'),
     '#default_value' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
-    '#description' => t('The callback URL of this website. The default value is !url.<br />Ensure that this is the same url which your submitted to MYDIGIPASS.COM!', array('!url' => url('mydigipass/callback', array('absolute' => TRUE)))),
+    '#description' => t('The callback URL of this website. The default value is !url.<br />Ensure that this is the same url which you submitted to MYDIGIPASS.COM!', array('!url' => url('mydigipass/callback', array('absolute' => TRUE)))),
     '#required' => TRUE,
   );
 
@@ -148,29 +148,60 @@ function mydigipass_admin_settings_user_profile_fields_form($form_state) {
   $form = array();
 
   // Extract all available fields which are currently selected.
-  $sql = 'SELECT name FROM {mydigipass_profile_fields}';
+  $sql = 'SELECT name, title, weight, selected FROM {mydigipass_profile_fields} ORDER BY weight ASC';
   $result = db_query($sql);
-  $selected_user_data_fields = array();
+  $user_data_fields = array();
   while ($row = db_fetch_object($result)) {
-    $selected_user_data_fields[] = $row->name;
+    $user_data_fields[] = array(
+      'name' => check_plain($row->name),
+      'title' => check_plain($row->title),
+      'weight' => $row->weight,
+      'selected' => $row->selected,
+    );
   }
 
   // Extract all available fields which are currently available in the
-  // user_data column.
-  $sql = 'SELECT DISTINCT attribute_key FROM {mydigipass_user_data} WHERE attribute_key <> \'error\' ORDER BY attribute_key ASC';
+  // user_data column which are not yet used in the mydigipass_profile_fields
+  // table.
+  $sql = 'SELECT DISTINCT attribute_key FROM {mydigipass_user_data} WHERE attribute_key <> \'error\' AND attribute_key NOT IN (SELECT name FROM {mydigipass_profile_fields}) ORDER BY attribute_key ASC';
   $result = db_query($sql);
-  $all_user_data_fields = array();
   while ($row = db_fetch_object($result)) {
-    $all_user_data_fields[check_plain($row->attribute_key)] = check_plain($row->attribute_key);
+    $user_data_fields[] = array(
+      'name' => check_plain($row->attribute_key),
+      'title' => "",
+      'weight' => 0,
+      'selected' => FALSE,
+    );
   }
 
-  $form['user_data_fields'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Available user data fields'),
-    '#options' => $all_user_data_fields,
-    '#default_value' => $selected_user_data_fields,
-    '#description' => t("These fields are user attribute fields which have already been provided by MYDIGIPASS.COM. Select the fields of which you would like to display the values when displaying a user's profile."),
-  );
+  // Construct the form.
+  $form = array();
+  $form['items'] = array();
+  $form['items']['#tree'] = TRUE;
+
+  foreach ($user_data_fields as $item) {
+    $form['items'][$item['name']] = array(
+      'selected' => array(
+        '#type' => 'checkbox',
+        '#title' => check_plain($item['name']),
+        '#default_value' => isset($item['selected']) ? $item['selected'] : FALSE,
+      ),
+      'title' => array(
+        '#type' => 'textfield',
+        '#default_value' => $item['title'],
+      ),
+      'weight' => array(
+        '#type' => 'weight',
+        '#delta' => count($user_data_fields),
+        '#default_value' => isset($item['weight']) ? $item['weight'] : 0,
+      ),
+      'name' => array(
+        '#type' => 'hidden',
+        '#value' => $item['name'],
+      ),
+    );
+  }
+
   $form[] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -180,14 +211,40 @@ function mydigipass_admin_settings_user_profile_fields_form($form_state) {
 }
 
 /**
+ * Theme callback for the mydigipass_admin_settings_user_profile_fields_form.
+ *
+ * The theme callback will format the $form data structure into a table and
+ * add our tabledrag functionality. (Note that drupal_add_tabledrag should be
+ * called from the theme layer, and not from a form declaration. This helps
+ * keep template files clean and readable, and prevents tabledrag.js from
+ * being added twice accidently.
+ *
+ * @return string
+ *   The rendered tabledrag form
+ */
+function theme_mydigipass_admin_settings_user_profile_fields_form($form) {
+  drupal_add_tabledrag('draggable-table', 'order', 'sibling', 'weight-group');
+  $header = array(t('Show field'), t('Show as'), t('Weight'));
+  foreach (element_children($form['items']) as $key) {
+    $element = &$form['items'][$key];
+    $element['weight']['#attributes']['class'] = 'weight-group';
+    $row = array();
+    $row[] = drupal_render($element['selected']);
+    $row[] = drupal_render($element['title']);
+    $row[] = drupal_render($element['weight']) . drupal_render($element['name']);
+    $rows[] = array('data' => $row, 'class' => 'draggable');
+  }
+  $output = theme('table', $header, $rows, array('id' => 'draggable-table'));
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
  * Submit handler for mydigipass_admin_settings_user_profile_fields_form().
  *
  * @see mydigipass_admin_settings_user_profile_fields_form_validate()
  */
 function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form_state) {
-  // Store the submitted form values in a variable.
-  $user_data_fields = $form_state['values']['user_data_fields'];
-
   // A boolean via which we will track whether the database queries were
   // succesfull.
   $success = TRUE;
@@ -197,12 +254,10 @@ function mydigipass_admin_settings_user_profile_fields_form_submit($form, &$form
   db_query($sql);
 
   // Store the selected attribute names in the database.
-  $sql = "INSERT INTO {mydigipass_profile_fields} VALUES ('%s')";
+  $sql = "INSERT INTO {mydigipass_profile_fields} (name, title, selected, weight) VALUES ('%s', '%s', %d, %d)";
 
-  foreach ($user_data_fields as $key => $value) {
-    if ($key === $value) {
-      $success = db_query($sql, $value) && $success;
-    }
+  foreach ($form_state['values']['items'] as $item) {
+    $success = db_query($sql, $item['name'], $item['title'], $item['selected'], $item['weight']) && $success;
   }
   if ($success) {
     drupal_set_message(t('The configuration options have been saved.'));

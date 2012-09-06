@@ -71,16 +71,30 @@ function mydigipass_callback() {
   }
 
   // Extract the value of the state parameter.
-  $state = $_GET['state'];
+  $state_string = $_GET['state'];
   // Validate using regular expression that, if the state parameter is set,
-  // the state exists out of [0-9a-z] characters.
-  if (!empty($state) && (preg_match('/^[0-9a-z]+$/', $code) != 1)) {
+  // the state exists out of Base64 characters.
+  if (!empty($state_string) && (preg_match('/^[a-zA-Z0-9+\/]+={0,2}$/', $state_string) != 1)) {
     drupal_set_message(
       t('An error occured: the state parameter does not have the expected format'),
       'error');
     watchdog(
       'mydigipass',
       'An error occured: the state parameter does not have the expected format',
+      array(),
+      WATCHDOG_ERROR);
+    return $return_or_error;
+  }
+  $state_array = _mydigipass_decode_state_array($state_string);
+
+  // Check whether the CSRF token is correct in the state array.
+  if (!_mydigipass_check_csrf_token($state_array)) {
+    drupal_set_message(
+      t('An error occured: the CSRF token in the state parameter has an incorrect value'),
+      'error');
+    watchdog(
+      'mydigipass',
+      'An error occured: the CSRF token in the state parameter has an incorrect value',
       array(),
       WATCHDOG_ERROR);
     return $return_or_error;
@@ -126,20 +140,17 @@ function mydigipass_callback() {
   if ($result == 1) {
     // The MYDIGIPASS.COM end-user is already linked to an existing Drupal
     // user, let's authenticate the Drupal user.
-    global $user;
-
     $sql = "SELECT name FROM {users} U, {mydigipass_user_link} MDP WHERE U.uid = MDP.drupal_uid AND mdp_uuid = '%s'";
     $name = db_result(db_query($sql, $user_data_array['uuid']));
-    $user = user_load(array('name' => $name));
-    $success = user_external_login($user);
-    if (!$success) {
-      // The user didn't pass the user_external_login function, so probably the
-      // user account is disabled or locked. Destroy the current session and
-      // make sure the user is set to the anonymous user.
-      session_destroy();
-      // Load the anonymous user.
-      $user = drupal_anonymous_user();
-    }
+    $account = user_load(array('name' => $name));
+
+    // If user_external_login() fails, this probably means that the user
+    // account is disabled or locked. The validation handler which checks for
+    // that already shows an error to the end-user and makes sure that the user
+    // is not logged on. If the user account is active, then the
+    // user_external_login will also make sure that the $user object gets
+    // loaded.
+    user_external_login($account);
 
     // Redirect the user to the front page.
     drupal_goto('<front>');
@@ -152,8 +163,8 @@ function mydigipass_callback() {
     // Check if the user is logged in and if the state parameter is set.
     // If so, then the user clicked the 'Link to MYDIGIPASS.COM' button in his
     // profile.
-    if (user_is_logged_in() && !empty($_SESSION['mydigipass_link_code']) &&
-        ($state == $_SESSION['mydigipass_link_code'])) {
+    if (user_is_logged_in() && !empty($_SESSION['mydigipass_link_csrf_token']) &&
+        ($state_array['action'] == 'link')) {
       global $user;
       // Link to currently logged on user.
       $sql = "INSERT INTO {mydigipass_user_link} "
@@ -170,7 +181,7 @@ function mydigipass_callback() {
       }
 
       // Cleanup the session data: the link code is already consumed.
-      unset($_SESSION['mydigipass_link_code']);
+      unset($_SESSION['mydigipass_link_csrf_token']);
 
       // Redirect to the user edit form (which contained the MYDIGIPASS.COM
       // connect button).
@@ -179,7 +190,7 @@ function mydigipass_callback() {
     }
     else {
       // Show the link user wizard or the mydigipass_user_register form.
-      if ($state == 'register') {
+      if ($state_array['action'] == 'register') {
         drupal_goto('mydigipass/link/new_user');
       }
       else {
@@ -342,4 +353,37 @@ function _mydigipass_callback_get_user_data($access_token) {
       drupal_set_message(t('An error occured while contacting MYDIGIPASS.COM.'));
   }
   return $return;
+}
+
+/**
+ * Private helper function which checks the CSRF token in the state parameter.
+ *
+ * In every OAuth call to MYDIGIPASS.COM a token is added which allows to
+ * check whether the call to MYDIGIPASS.COM originated from within this session
+ * (i.e. whether the end-user clicked on the button).
+ *
+ * @param array $state_array
+ *   An array containing the decoded value of the state array.
+ *
+ * @return bool
+ *   Returns TRUE if the CSRF token was correct, returns FALSE in all other
+ *   cases.
+ */
+function _mydigipass_check_csrf_token($state_array) {
+  switch ($state_array['action']) {
+    case 'login':
+      return ($state_array['csrf_token'] == $_SESSION['mydigipass_login_csrf_token']);
+      break;
+
+    case 'register':
+      return ($state_array['csrf_token'] == $_SESSION['mydigipass_register_csrf_token']);
+      break;
+
+    case 'link':
+      return ($state_array['csrf_token'] == $_SESSION['mydigipass_link_csrf_token']);
+      break;
+
+    default:
+      return FALSE;
+  }
 }
