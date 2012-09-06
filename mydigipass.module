@@ -119,6 +119,21 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     // The standard login form.
     case 'user_login_block':
     case 'user_login':
+      // Generate a random 32-char string. This string serves as a csrf token
+      // to detect that the click originated from within this session. It will
+      // be used as a value for the state parameter and is stored in this user's
+      // session. This allows to verify that the end-user effectivelity clicked
+      // the button to link and will avoid that a CSRF-alike attack is being
+      // performed on a logged-on end-user by a malicious person.
+      $_SESSION['mydigipass_login_csrf_token'] = user_password(32);
+
+      // Prepare the value for the state parameter.
+      $state_array = array(
+        'csrf_token' => $_SESSION['mydigipass_login_csrf_token'],
+        'action' => 'login',
+      );
+      $state_string = _mydigipass_encode_state_array($state_array);
+
       // Add the MYDIGIPASS.COM button.
       $form['account']['mydigipass'] = array(
         '#type' => 'item',
@@ -129,6 +144,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
             'class' => 'dpplus-connect',
             'data-client-id' => variable_get('mydigipass_client_id', ''),
             'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-state' => $state_string,
             'data-style' => variable_get('mydigipass_login_form_style', 'default'),
             'data-text' => variable_get('mydigipass_login_form_text', 'secure-login'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
@@ -149,6 +165,21 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
 
     // The standard user registration form.
     case 'user_register':
+      // Generate a random 32-char string. This string serves as a csrf token
+      // to detect that the click originated from within this session. It will
+      // be used as a value for the state parameter and is stored in this user's
+      // session. This allows to verify that the end-user effectivelity clicked
+      // the button to link and will avoid that a CSRF-alike attack is being
+      // performed on a logged-on end-user by a malicious person.
+      $_SESSION['mydigipass_register_csrf_token'] = user_password(32);
+
+      // Prepare the value for the state parameter.
+      $state_array = array(
+        'csrf_token' => $_SESSION['mydigipass_register_csrf_token'],
+        'action' => 'register',
+      );
+      $state_string = _mydigipass_encode_state_array($state_array);
+
       $form['mydigipass'] = array(
         '#type' => 'item',
         '#value' => l(t('Connect with MYDIGIPASS.COM'), '', array(
@@ -158,7 +189,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
             'class' => 'dpplus-connect',
             'data-client-id' => variable_get('mydigipass_client_id', ''),
             'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
-            'data-state' => 'register',
+            'data-state' => $state_string,
             'data-style' => variable_get('mydigipass_register_form_style', 'large'),
             'data-text' => variable_get('mydigipass_register_form_text', 'sign-up'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
@@ -171,12 +202,15 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
     // that he/she already had a Drupal account.
     case 'mydigipass_user_login':
       // Change the text on the submit button.
-      $form['submit']['#value'] = t('Link to account');
+      $form['submit']['#value'] = t('Link account to MYDIGIPASS.COM');
 
       // Add a submit handler which links the MYDIGIPASS.COM account to the
       // logged on user. f authentication fails, the submit handler will not be
       // called since the request will be stopped by the validation handler(s).
       $form['#submit'][] = 'mydigipass_link_user_to_logged_on_user';
+      // Add a validation handler which verifies whether the entered user is
+      // already linked to a MYDIGIPASS.COM account.
+      array_unshift($form['#validate'], 'mydigipass_verify_if_user_already_linked');
       break;
 
     // The form shown on the mydigipass link page when the end-user indicated
@@ -192,6 +226,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       // The value of the password doesn't really matter since a random
       // password is created and stored when the user is effectively created.
       $form['pass']['#type'] = 'value';
+      $form['pass']['#value'] = user_password(32);
 
       // Change the text on the submit button.
       $form['submit']['#value'] = t('Create new account and link to MYDIGIPASS.COM');
@@ -252,15 +287,16 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
           '#title' => t('MYDIGIPASS.COM user data'),
           '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
         );
-        $sql = "SELECT * FROM {mydigipass_user_link} UL LEFT JOIN {mydigipass_user_data} UD ON UL.mdp_uuid = UD.mdp_uuid LEFT JOIN {mydigipass_profile_fields} PF ON PF.name = UD.attribute_key WHERE UL.drupal_uid = %d AND PF.name IS NOT NULL ORDER BY UD.attribute_key";
+        $sql = "SELECT * FROM {mydigipass_user_link} UL LEFT JOIN {mydigipass_user_data} UD ON UL.mdp_uuid = UD.mdp_uuid LEFT JOIN {mydigipass_profile_fields} PF ON PF.name = UD.attribute_key WHERE UL.drupal_uid = %d AND PF.name IS NOT NULL AND PF.selected = 1 ORDER BY PF.weight ASC";
         $result = db_query($sql, $account->uid);
 
         while ($row = db_fetch_object($result)) {
           $account->content['mydigipass_user_data'][$row->attribute_key] = array(
             '#type' => 'user_profile_item',
-            '#title' => t($row->attribute_key),
+            '#title' => (empty($row->title) ? t($row->attribute_key) : t($row->title)),
             '#value' => check_plain($row->attribute_value),
             '#attributes' => array('class' => 'profile-' . check_plain($row->attribute_key)),
+            '#weight' => $row->weight,
           );
         }
       }
@@ -268,7 +304,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
         $account->content['summary']['mydigipass'] = array(
           '#type' => 'user_profile_item',
           '#title' => 'MYDIGIPASS.COM',
-          '#value' => t('This user account is not yet linked to a MYDIGIPASS.COM account'),
+          '#value' => t('This user account is not yet linked to a MYDIGIPASS.COM account.'),
         );
       }
       break;
@@ -323,22 +359,6 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
 }
 
 /**
- * Form validation handler for mydigipass_user_register().
- *
- * This validation handler is executed when a user creates a new Drupal user
- * using the form which is shown on 'mydigipass/link/new_user'. This function
- * validates whether the entered email address is the same as the one which was
- */
-function mydigipass_register_user_validate_email($form, &$form_state) {
-  $uuid = $_SESSION['mydigipass_uuid'];
-  $sql = "SELECT attribute_value FROM {mydigipass_user_data} WHERE mdp_uuid = '%s' AND attribute_key = 'email'";
-  $mdp_email = db_result(db_query($sql, $uuid));
-  if ($form_state['values']['mail'] != $mdp_email) {
-    form_set_error('mail', t('The email address registered at MYDIGIPASS.COM is %mail. You have to register using the same email address at this website.', array('%mail' => $mdp_email)));
-  }
-}
-
-/**
  * Form validation handler to enforce the authentication mode during login.
  *
  * Form validation handler of the login form which enforces the authentication
@@ -348,7 +368,7 @@ function mydigipass_register_user_validate_email($form, &$form_state) {
 function mydigipass_enforce_authentication_mode_during_login($form, &$form_state) {
   if (variable_get('mydigipass_authentication_mode', 'mdp_only') == 'mdp_only') {
     $sql = "SELECT 1 FROM {mydigipass_user_link} UL, {users} U WHERE U.uid = UL.drupal_uid AND U.name = '%s'";
-    $result = db_result(db_query($sql, $form_state['values']['name']));
+    $result = db_result(db_query($sql, trim($form_state['values']['name'])));
 
     if ($result == 1) {
       form_set_error('name', t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM."));
@@ -376,6 +396,23 @@ function mydigipass_enforce_authentication_mode_during_password_reset($form, &$f
 }
 
 /**
+ * Form validation handler which checks if a user is already linked to MDP.
+ *
+ * Form validation handler which is called after the mydigipass_user_login
+ * form. This handler will stop the link process if it detects that the
+ * end-user is trying to link his MYDIGIPASS.COM account to a Drupal user who
+ * is already linked to another MYDIGIPASS.COM account.
+ */
+function mydigipass_verify_if_user_already_linked($form, &$form_state) {
+  $sql = "SELECT 1 FROM {mydigipass_user_link} UL, {users} U WHERE U.uid = UL.drupal_uid AND U.name = '%s'";
+  $result = db_result(db_query($sql, trim($form_state['values']['name'])));
+
+  if ($result == 1) {
+    form_set_error('name', t("The username %name has already been linked to a MYDIGIPASS.COM account. A user can only be linked to one MYDIGIPASS.COM account.", array('%name' => $form_state['values']['name'])));
+  }
+}
+
+/**
  * Form submit handler which links an existing user to a MYDIGIPASS.COM user.
  *
  * Form submit handler which is called after the mydigipass_user_login
@@ -393,7 +430,7 @@ function mydigipass_link_user_to_logged_on_user($form, &$form_state) {
     drupal_set_message(t('The user has been successfully linked to MYDIGIPASS.COM.'));
   }
   else {
-    drupal_set_message(t('An error occured while linking the user to MYDIGIPASS.COM.', 'error'));
+    drupal_set_message(t('An error occured while linking the user to MYDIGIPASS.COM.'), 'error');
   }
 }
 
@@ -480,7 +517,6 @@ function mydigipass_form_profile($edit, $account) {
     $mdp_email = db_result(db_query($sql, $account->uid));
     $form['mydigipass'][] = array(
       '#type' => 'item',
-      '#title' => t('MYDIGIPASS.COM'),
       '#value' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
     );
     $form['mydigipass'][] = array(
@@ -505,12 +541,20 @@ function mydigipass_form_profile($edit, $account) {
         '#value' => t('Click on the button below to secure your account with MYDIGIPASS.COM.'),
       );
 
-      // Generate a random 32-char string. This string will be used as value
-      // for the state parameter and is stored in this user's session. This
-      // allows to verify that the end-user effectivelity clicked the button to
-      // link and will avoid that a CSRF-alike attack is being performed on a
-      // logged-on end-user by a malicious person.
-      $_SESSION['mydigipass_link_code'] = user_password(32);
+      // Generate a random 32-char string. This string serves as a csrf token
+      // to detect that the click originated from within this session. It will
+      // be used as a value for the state parameter and is stored in this user's
+      // session. This allows to verify that the end-user effectivelity clicked
+      // the button to link and will avoid that a CSRF-alike attack is being
+      // performed on a logged-on end-user by a malicious person.
+      $_SESSION['mydigipass_link_csrf_token'] = user_password(32);
+
+      // Prepare the value for the state parameter.
+      $state_array = array(
+        'csrf_token' => $_SESSION['mydigipass_link_csrf_token'],
+        'action' => 'link',
+      );
+      $state_string = _mydigipass_encode_state_array($state_array);
 
       // The MYDIGIPASS.COM button also contains the data-state parameter.
       $form['mydigipass'][] = array(
@@ -522,7 +566,7 @@ function mydigipass_form_profile($edit, $account) {
             'class' => 'dpplus-connect',
             'data-client-id' => variable_get('mydigipass_client_id', ''),
             'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
-            'data-state' => $_SESSION['mydigipass_link_code'],
+            'data-state' => $state_string,
             'data-style' => variable_get('mydigipass_link_form_style', 'large'),
             'data-text' => variable_get('mydigipass_link_form_text', 'connect'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
@@ -564,7 +608,7 @@ function mydigipass_form_profile_unlink($form, &$form_state) {
     drupal_set_message(t('Your account has been successfully unlinked. You can no longer log in with MYDIGIPASS.COM.'));
   }
   else {
-    drupal_set_message(t('An error occured while unlinking the account from MYDIGIPASS.COM', 'error'));
+    drupal_set_message(t('An error occured while unlinking the account from MYDIGIPASS.COM'), 'error');
   }
 }
 
@@ -602,7 +646,7 @@ function _mydigipass_get_endpoint_url($endpoint) {
       break;
 
     case 'dp_connect.js':
-      return $base_url .  '/dp_connect.js';
+      return $base_url . '/dp_connect.js';
       break;
   }
   return '';
@@ -739,4 +783,49 @@ function mydigipass_link_existing_user() {
   }
 
   return $output;
+}
+
+/**
+ * Encodes an array into a Base64 string.
+ *
+ * This function encodes an array into a Base64 string so that it can be used
+ * as a value to the state parameter. The state parameter is used in the OAuth
+ * call to MYDIGIPASS.COM.
+ *
+ * @param array $state_array
+ *   The array containing the values which have to be encoded.
+ *
+ * @return string
+ *   The Base64 representation of the array.
+ */
+function _mydigipass_encode_state_array($state_array) {
+  return base64_encode(json_encode($state_array));
+}
+
+/**
+ * Decodes a Base64 string into an array.
+ *
+ * This function decodes a Base64 string into an array. The array contains the
+ * values which were passed in the state parameter used in the OAuth call to
+ * MYDIGIPASS.COM.
+ *
+ * @param string $state_string
+ *   The Base64 string received by the callback function.
+ *
+ * @return array
+ *   The decoded Base64 string.
+ */
+function _mydigipass_decode_state_array($state_string) {
+  return json_decode(base64_decode($state_string, TRUE), TRUE);
+}
+
+/**
+ * Implements hook_theme().
+ */
+function mydigipass_theme() {
+  return array(
+    'mydigipass_admin_settings_user_profile_fields_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
 }

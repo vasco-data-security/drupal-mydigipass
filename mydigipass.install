@@ -100,6 +100,26 @@ function mydigipass_schema() {
         'length' => '256',
         'not null' => TRUE,
       ),
+      'title' => array(
+        'description' => 'A human readable name given to the attribute key.',
+        'type' => 'varchar',
+        'length' => '256',
+        'default' => '',
+        'not null' => FALSE,
+      ),
+      'selected' => array(
+        'description' => 'Indicates whether the attribute must be shown are not.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'weight' => array(
+        'description' => 'The weight of the attribute when being shown.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('name'),
   );
@@ -123,11 +143,55 @@ function mydigipass_schema() {
         'description' => 'The attribute value.',
         'type' => 'varchar',
         'length' => '1024',
-        'not null' => TRUE,
+        'not null' => FALSE,
       ),
     ),
     'primary key' => array('mdp_uuid', 'attribute_key'),
   );
 
   return $schema;
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Changes:
+ *  - Extends the table mydigipass_profile_fields with 3 columns.
+ *  - Makes sure that the fields currently in the mydigipass_profile_fields are
+ *    still shown after the update.
+ *  - Allows that the column attribute_value contains NULL values.
+ */
+function mydigipass_update_6100() {
+  $ret = array();
+  db_add_field($ret, 'mydigipass_profile_fields', 'title', array(
+    'description' => 'A human readable name given to the attribute key.',
+    'type' => 'varchar',
+    'length' => '256',
+    'default' => '',
+    'not null' => FALSE,
+  ));
+  db_add_field($ret, 'mydigipass_profile_fields', 'selected', array(
+    'description' => 'Indicates whether the attribute must be shown are not.',
+    'type' => 'int',
+    'size' => 'tiny',
+    'not null' => TRUE,
+    'default' => 0,
+  ));
+  db_add_field($ret, 'mydigipass_profile_fields', 'weight', array(
+    'description' => 'The weight of the attribute when being shown.',
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  ));
+
+  db_change_field($ret, 'mydigipass_user_data', 'attribute_value', 'attribute_value', array(
+    'type' => 'varchar',
+    'length' => '1024',
+    'not null' => FALSE,
+  ));
+
+  $sql = 'UPDATE {mydigipass_profile_fields} SET selected = 1';
+  $ret[] = update_sql($sql);
+
+  return $ret;
 }

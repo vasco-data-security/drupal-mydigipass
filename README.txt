@@ -11,10 +11,10 @@ MYDIGIPASS.COM account and for new users to register a new Drupal account and
 to link it immediately to their MYDIGIPASS.COM account.
 
 For a full description of the module, visit the project page:
-  http://drupal.org/sandbox/lva/1687376
+  http://drupal.org/project/mydigipass
 
 To submit bug reports and feature suggestions, or to track changes:
-  http://drupal.org/project/issues/1687376
+  http://drupal.org/project/issues/mydigipass
 
 
 -- REQUIREMENTS --
@@ -25,9 +25,7 @@ service on the Internet. If you don't know whether your webserver can make such
 connections, a "Test connectivity" button has been foreseen in the module's
 administration pages which allow to check whether it is possible to make
 connections to MYDIGIPASS.COM or not. In order to connect to MYDIGIPASS.COM,
-the module requires either the cURL extension to be enabled on your PHP 
-installation or it requires the function fsockopen together with the OpenSSL
-extension to be enabled.
+the module uses the same functionality as used by Drupal to check for updates.
 
 When using this module on a production website, it is strongly recommended that
 your website is reachable over https.
@@ -55,7 +53,7 @@ your website is reachable over https.
   - /?q=mydigipass/callback       (when clean URLs are disabled)
   
   Therefore if your website's domain is www.example.com, then your callback URL
-  is the following when you are using clearn URLs:
+  is the following when you are using clean URLs:
   http://www.example.com/mydigipass/callback
   
 * Configure the MYDIGIPASS.COM settings in 
@@ -65,14 +63,17 @@ your website is reachable over https.
     instance of MYDIGIPASS.COM.
 
     If you registered your website yourself on MYDIGIPASS.COM developer's
-	website, then you are using the sandbox instance. If you had contact with
-	MYDIGIPASS.COM and they registered your website for you, then you are using
-	the production instance.
+    website, then you are using the sandbox instance. If you had contact with
+    MYDIGIPASS.COM and they registered your website for you, then you are using
+    the production instance.
 
   - Enter your client_id and client_secret.
 
     You received these details from MYDIGIPASS.COM after registering your
-	website.
+    website.
+
+  - Enable the integration by ticking the "Enable MYDIGIPASS.COM integration"
+    checkbox.
 
 
 -- CUSTOMIZATION --
@@ -99,11 +100,11 @@ your website is reachable over https.
 
   - Have you registered the correct callback URL at MYDIGIPASS.COM? For example
     you might have registered WWW.example.com/mydigipass/callback whereas you
-	might currently be accessing you website without the WWW prefix (being
-	example.com).
+    might currently be accessing you website without the WWW prefix (being
+    example.com).
 
 
 -- CONTACT --
 
-Current maintainers:
+Current maintainer:
 * Lode Vanstechelman - http://drupal.org/user/657472
