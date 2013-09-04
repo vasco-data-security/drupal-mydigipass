@@ -1,5 +1,0 @@
-name = MYDIGIPASS.COM Authentication
-description = Implements authentication via MYDIGIPASS.COM
-package = Security
-core = 6.x
-php = 5.0
