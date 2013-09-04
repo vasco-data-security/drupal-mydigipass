@@ -14,20 +14,39 @@ function mydigipass_requirements($phase) {
 
   switch ($phase) {
     case 'install':
-    case 'runtime':
-      if (function_exists('fsockopen') && in_array('openssl', get_loaded_extensions())) {
-        $requirements['mydigipass'] = array(
-          'title' => $title,
-          'value' => $t('Functionality is available to make outbound connections.'),
-          'severity' => REQUIREMENT_OK,
-        );
-      }
-      else {
+      if (!(function_exists('stream_socket_client') && in_array('openssl', get_loaded_extensions()))) {
         $requirements['mydigipass'] = array(
           'title' => $title,
           'description' => $t('This PHP installation lacks the necessary functions to make outbound connections.'),
           'severity' => REQUIREMENT_ERROR,
         );
+      }
+      break;
+
+    case 'runtime':
+      if (variable_get('mydigipass_integration_enabled', 0) == 1) {
+        if (function_exists('stream_socket_client') && in_array('openssl', get_loaded_extensions()) && (variable_get('mydigipass_validate_certificate', 'disabled') == 'enabled')) {
+          $requirements['mydigipass'] = array(
+            'title' => $title,
+            'value' => $t('MYDIGIPASS.COM SSL server certificate validation is enabled.'),
+            'severity' => REQUIREMENT_OK,
+          );
+        }
+        elseif (!(function_exists('stream_socket_client') && in_array('openssl', get_loaded_extensions()))) {
+          $requirements['mydigipass'] = array(
+            'title' => $title,
+            'description' => $t('This PHP installation lacks the necessary functions to make outbound connections.'),
+            'severity' => REQUIREMENT_ERROR,
+          );
+        }
+        elseif (variable_get('mydigipass_validate_certificate', 'disabled') == 'disabled') {
+          $requirements['mydigipass'] = array(
+            'title' => $title,
+            'value' => $t('MYDIGIPASS.COM SSL server certificate validation is disabled.'),
+            'description' => $t('It is strongly recommended to enable SSL certificate validation to detect and prevent serious attacks. Enable certificate validation !here.', array('!here' => l($t('here'), 'admin/settings/mydigipass/security_settings'))),
+            'severity' => REQUIREMENT_WARNING,
+          );
+        }
       }
       break;
   }
@@ -63,6 +82,9 @@ function mydigipass_uninstall() {
   variable_del('mydigipass_register_form_style');
   variable_del('mydigipass_register_form_text');
   variable_del('mydigipass_integration_enabled');
+  variable_del('mydigipass_validate_certificate');
+  variable_del('mydigipass_validate_certificate_cafile');
+  variable_del('mydigipass_connect_api_inconsistency');
 }
 
 /**
@@ -108,7 +130,7 @@ function mydigipass_schema() {
         'not null' => FALSE,
       ),
       'selected' => array(
-        'description' => 'Indicates whether the attribute must be shown are not.',
+        'description' => 'Indicates whether the attribute must be shown or not.',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
@@ -171,7 +193,7 @@ function mydigipass_update_6100() {
     'not null' => FALSE,
   ));
   db_add_field($ret, 'mydigipass_profile_fields', 'selected', array(
-    'description' => 'Indicates whether the attribute must be shown are not.',
+    'description' => 'Indicates whether the attribute must be shown or not.',
     'type' => 'int',
     'size' => 'tiny',
     'not null' => TRUE,
@@ -194,4 +216,18 @@ function mydigipass_update_6100() {
   $ret[] = update_sql($sql);
 
   return $ret;
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Changes:
+ *  - This update first uses the connected API. All already connected
+ *    users should be synchronized with MYDIGIPASS.COM.
+ */
+function mydigipass_update_6300() {
+  // Important to negate the result of sync_connected_users:
+  // api_inconsistency = TRUE if sync_connected_users = FALSE!
+  variable_set('mydigipass_connect_api_inconsistency', !_mydigipass_sync_connected_users());
+  return array();
 }

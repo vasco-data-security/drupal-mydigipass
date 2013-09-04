@@ -49,6 +49,16 @@ function mydigipass_menu() {
     'file' => 'mydigipass.admin.inc.php',
   );
 
+  $items['admin/settings/mydigipass/security_settings'] = array(
+    'title' => 'Security settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mydigipass_admin_settings_security_form'),
+    'description' => 'Configure security settings such as server certificate validation',
+    'access arguments' => array('administer mydigipass'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'mydigipass.admin.inc.php',
+  );
+
   $items['mydigipass/callback'] = array(
     'title' => 'MYDIGIPASS.COM callback',
     'page callback' => 'mydigipass_callback',
@@ -122,10 +132,12 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       // Generate a random 32-char string. This string serves as a csrf token
       // to detect that the click originated from within this session. It will
       // be used as a value for the state parameter and is stored in this user's
-      // session. This allows to verify that the end-user effectivelity clicked
+      // session. This allows to verify that the end-user effectively clicked
       // the button to link and will avoid that a CSRF-alike attack is being
       // performed on a logged-on end-user by a malicious person.
-      $_SESSION['mydigipass_login_csrf_token'] = user_password(32);
+      if (empty($_SESSION['mydigipass_login_csrf_token'])) {
+        $_SESSION['mydigipass_login_csrf_token'] = user_password(32);
+      }
 
       // Prepare the value for the state parameter.
       $state_array = array(
@@ -142,8 +154,8 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
           'external' => TRUE,
           'attributes' => array(
             'class' => 'dpplus-connect',
-            'data-client-id' => variable_get('mydigipass_client_id', ''),
-            'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
+            'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
             'data-state' => $state_string,
             'data-style' => variable_get('mydigipass_login_form_style', 'default'),
             'data-text' => variable_get('mydigipass_login_form_text', 'secure-login'),
@@ -168,10 +180,12 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       // Generate a random 32-char string. This string serves as a csrf token
       // to detect that the click originated from within this session. It will
       // be used as a value for the state parameter and is stored in this user's
-      // session. This allows to verify that the end-user effectivelity clicked
+      // session. This allows to verify that the end-user effectively clicked
       // the button to link and will avoid that a CSRF-alike attack is being
       // performed on a logged-on end-user by a malicious person.
-      $_SESSION['mydigipass_register_csrf_token'] = user_password(32);
+      if (empty($_SESSION['mydigipass_register_csrf_token'])) {
+        $_SESSION['mydigipass_register_csrf_token'] = user_password(32);
+      }
 
       // Prepare the value for the state parameter.
       $state_array = array(
@@ -187,8 +201,8 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
           'external' => TRUE,
           'attributes' => array(
             'class' => 'dpplus-connect',
-            'data-client-id' => variable_get('mydigipass_client_id', ''),
-            'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
+            'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
             'data-state' => $state_string,
             'data-style' => variable_get('mydigipass_register_form_style', 'large'),
             'data-text' => variable_get('mydigipass_register_form_text', 'sign-up'),
@@ -205,7 +219,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
       $form['submit']['#value'] = t('Link account to MYDIGIPASS.COM');
 
       // Add a submit handler which links the MYDIGIPASS.COM account to the
-      // logged on user. f authentication fails, the submit handler will not be
+      // logged on user. If authentication fails, the submit handler will not be
       // called since the request will be stopped by the validation handler(s).
       $form['#submit'][] = 'mydigipass_link_user_to_logged_on_user';
       // Add a validation handler which verifies whether the entered user is
@@ -253,6 +267,17 @@ function mydigipass_forms() {
 }
 
 /**
+ * Implements hook_cron().
+ */
+function mydigipass_cron() {
+  if (variable_get('mydigipass_connect_api_inconsistency', TRUE)) {
+    // Important to negate the result of sync_connected_users:
+    // api_inconsistency = TRUE if sync_connected_users = FALSE!
+    variable_set('mydigipass_connect_api_inconsistency', !_mydigipass_sync_connected_users());
+  }
+}
+
+/**
  * Implements hook_user().
  */
 function mydigipass_user($op, &$edit, &$account, $category = NULL) {
@@ -282,22 +307,24 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
 
         // Add the known MYDIGIPASS.COM user data of which the administrator
         // allowed it to be shown.
-        $account->content['mydigipass_user_data'] = array(
-          '#type' => 'user_profile_category',
-          '#title' => t('MYDIGIPASS.COM user data'),
-          '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
-        );
         $sql = "SELECT * FROM {mydigipass_user_link} UL LEFT JOIN {mydigipass_user_data} UD ON UL.mdp_uuid = UD.mdp_uuid LEFT JOIN {mydigipass_profile_fields} PF ON PF.name = UD.attribute_key WHERE UL.drupal_uid = %d AND PF.name IS NOT NULL AND PF.selected = 1 ORDER BY PF.weight ASC";
         $result = db_query($sql, $account->uid);
 
-        while ($row = db_fetch_object($result)) {
-          $account->content['mydigipass_user_data'][$row->attribute_key] = array(
-            '#type' => 'user_profile_item',
-            '#title' => (empty($row->title) ? t($row->attribute_key) : t($row->title)),
-            '#value' => check_plain($row->attribute_value),
-            '#attributes' => array('class' => 'profile-' . check_plain($row->attribute_key)),
-            '#weight' => $row->weight,
+        if ($result && db_affected_rows() > 0) {
+          $account->content['mydigipass_user_data'] = array(
+            '#type' => 'user_profile_category',
+            '#title' => t('MYDIGIPASS.COM user data'),
+            '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
           );
+          while ($row = db_fetch_object($result)) {
+            $account->content['mydigipass_user_data'][$row->attribute_key] = array(
+              '#type' => 'user_profile_item',
+              '#title' => (empty($row->title) ? t($row->attribute_key) : t($row->title)),
+              '#value' => check_plain($row->attribute_value),
+              '#attributes' => array('class' => 'profile-' . check_plain($row->attribute_key)),
+              '#weight' => $row->weight,
+            );
+          }
         }
       }
       else {
@@ -311,7 +338,6 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
 
     case 'form':
       return mydigipass_form_profile($edit, $account);
-      break;
 
     case 'delete':
       // A user account is being deleted. The personal data and the link with
@@ -327,6 +353,9 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
       // Delete the personal data of the MYDIGIPASS.COM user.
       $sql = "DELETE FROM {mydigipass_user_data} WHERE mdp_uuid = '%s'";
       db_query($sql, $uuid);
+
+      // Inform MYDIGIPASS.COM of the removal of the link with MYDIGIPASS.COM.
+      _mydigipass_api_uuid_disconnected($uuid);
 
       break;
 
@@ -428,9 +457,11 @@ function mydigipass_link_user_to_logged_on_user($form, &$form_state) {
 
   if ($success) {
     drupal_set_message(t('The user has been successfully linked to MYDIGIPASS.COM.'));
+    // Inform MYDIGIPASS.COM of the link of the user.
+    _mydigipass_api_uuid_connected($uuid);
   }
   else {
-    drupal_set_message(t('An error occured while linking the user to MYDIGIPASS.COM.'), 'error');
+    drupal_set_message(t('An error occurred while linking the user to MYDIGIPASS.COM.'), 'error');
   }
 }
 
@@ -544,10 +575,12 @@ function mydigipass_form_profile($edit, $account) {
       // Generate a random 32-char string. This string serves as a csrf token
       // to detect that the click originated from within this session. It will
       // be used as a value for the state parameter and is stored in this user's
-      // session. This allows to verify that the end-user effectivelity clicked
+      // session. This allows to verify that the end-user effectively clicked
       // the button to link and will avoid that a CSRF-alike attack is being
       // performed on a logged-on end-user by a malicious person.
-      $_SESSION['mydigipass_link_csrf_token'] = user_password(32);
+      if (empty($_SESSION['mydigipass_link_csrf_token'])) {
+        $_SESSION['mydigipass_link_csrf_token'] = user_password(32);
+      }
 
       // Prepare the value for the state parameter.
       $state_array = array(
@@ -564,8 +597,8 @@ function mydigipass_form_profile($edit, $account) {
           'external' => TRUE,
           'attributes' => array(
             'class' => 'dpplus-connect',
-            'data-client-id' => variable_get('mydigipass_client_id', ''),
-            'data-redirect-uri' => variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE))),
+            'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
+            'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
             'data-state' => $state_string,
             'data-style' => variable_get('mydigipass_link_form_style', 'large'),
             'data-text' => variable_get('mydigipass_link_form_text', 'connect'),
@@ -606,9 +639,11 @@ function mydigipass_form_profile_unlink($form, &$form_state) {
     $sql = "DELETE FROM {mydigipass_user_data} WHERE mdp_uuid = '%s'";
     db_query($sql, $uuid);
     drupal_set_message(t('Your account has been successfully unlinked. You can no longer log in with MYDIGIPASS.COM.'));
+    // Inform MYDIGIPASS.COM of the unlink.
+    _mydigipass_api_uuid_disconnected($uuid);
   }
   else {
-    drupal_set_message(t('An error occured while unlinking the account from MYDIGIPASS.COM'), 'error');
+    drupal_set_message(t('An error occurred while unlinking the account from MYDIGIPASS.COM'), 'error');
   }
 }
 
@@ -639,16 +674,21 @@ function _mydigipass_get_endpoint_url($endpoint) {
   switch ($endpoint) {
     case 'token_endpoint':
       return $base_url . '/oauth/token';
-      break;
 
     case 'data_endpoint':
       return $base_url . '/oauth/user_data';
-      break;
 
     case 'dp_connect.js':
       return $base_url . '/dp_connect.js';
-      break;
+
+    case 'api-uuids-connected':
+      return $base_url . '/api/uuids/connected';
+
+    case 'api-uuids-disconnected':
+      return $base_url . '/api/uuids/disconnected';
+
   }
+
   return '';
 }
 
@@ -828,4 +868,535 @@ function mydigipass_theme() {
       'arguments' => array('form' => NULL),
     ),
   );
+}
+
+/**
+ * Private helper function used for timing requests.
+ *
+ * Slightly modified port of the Drupal 7 timer_start() function.
+ *
+ * @return float
+ *   Represents the current time in seconds since the Unix epoch accurate to
+ *   the nearest microsecond.
+ */
+function _mydigipass_timer_start() {
+  return microtime(TRUE);
+}
+
+/**
+ * Reads the current timer value without stopping the timer.
+ *
+ * Slightly modified port of the Drupal 7 timer_read() function.
+ *
+ * @param float $start
+ *   Represents the current time in seconds since the Unix epoch accurate to
+ *   the nearest microsecond.
+ *
+ * @return float
+ *   The current timer value in ms.
+ */
+function _mydigipass_timer_read($start) {
+  $stop = microtime(TRUE);
+  $diff = round(($stop - $start) * 1000, 2);
+  return $diff;
+}
+
+/**
+ * Private helper function which performs an HTTP request.
+ *
+ * This is a slightly modified version of the Drupal 7 implementation of
+ * drupal_http_request(). The changes were made to make it work in Drupal 6.
+ * This implementation is needed to be able to perform certificate validation.
+ *
+ * @param string $url
+ *   A string containing a fully qualified URI.
+ * @param array $options
+ *   (optional) An array that can have one or more of the following elements:
+ *   - headers: An array containing request headers to send as name/value pairs.
+ *   - method: A string containing the request method. Defaults to 'GET'.
+ *   - data: A string containing the request body, formatted as
+ *     'param=value&param=value&...'. Defaults to NULL.
+ *   - max_redirects: An integer representing how many times a redirect
+ *     may be followed. Defaults to 3.
+ *   - timeout: A float representing the maximum number of seconds the function
+ *     call may take. The default is 30 seconds. If a timeout occurs, the error
+ *     code is set to the HTTP_REQUEST_TIMEOUT constant.
+ *   - context: A context resource created with stream_context_create().
+ *
+ * @return object
+ *   An object that can have one or more of the following components:
+ *   - request: A string containing the request body that was sent.
+ *   - code: An integer containing the response status code, or the error code
+ *     if an error occurred.
+ *   - protocol: The response protocol (e.g. HTTP/1.1 or HTTP/1.0).
+ *   - status_message: The status message from the response, if a response was
+ *     received.
+ *   - redirect_code: If redirected, an integer containing the initial response
+ *     status code.
+ *   - redirect_url: If redirected, a string containing the URL of the redirect
+ *     target.
+ *   - error: If an error occurred, the error message. Otherwise not set.
+ *   - headers: An array containing the response headers as name/value pairs.
+ *     HTTP header names are case-insensitive (RFC 2616, section 4.2), so for
+ *     easy access the array keys are returned in lower case.
+ *   - data: A string containing the response body that was received.
+ */
+function _mydigipass_http_request($url, array $options = array()) {
+  $result = new stdClass();
+
+  // Parse the URL and make sure we can handle the schema.
+  $uri = @parse_url($url);
+
+  if ($uri == FALSE) {
+    $result->error = 'unable to parse URL';
+    $result->code = -1001;
+    return $result;
+  }
+
+  if (!isset($uri['scheme'])) {
+    $result->error = 'missing schema';
+    $result->code = -1002;
+    return $result;
+  }
+
+  $timer = _mydigipass_timer_start();
+
+  // Merge the default options.
+  $options += array(
+    'headers' => array(),
+    'method' => 'GET',
+    'data' => NULL,
+    'max_redirects' => 3,
+    'timeout' => 30.0,
+    'context' => NULL,
+  );
+
+  // Merge the default headers.
+  $options['headers'] += array(
+    'User-Agent' => 'Drupal (+http://drupal.org/)',
+  );
+
+  // stream_socket_client() requires timeout to be a float.
+  $options['timeout'] = (float) $options['timeout'];
+
+  switch ($uri['scheme']) {
+    case 'http':
+    case 'feed':
+      $port = isset($uri['port']) ? $uri['port'] : 80;
+      $socket = 'tcp://' . $uri['host'] . ':' . $port;
+      // RFC 2616: "non-standard ports MUST, default ports MAY be included".
+      // We don't add the standard port to prevent from breaking rewrite rules
+      // checking the host that do not take into account the port number.
+      $options['headers']['Host'] = $uri['host'] . ($port != 80 ? ':' . $port : '');
+      break;
+
+    case 'https':
+      // Note: Only works when PHP is compiled with OpenSSL support.
+      $port = isset($uri['port']) ? $uri['port'] : 443;
+      $socket = 'ssl://' . $uri['host'] . ':' . $port;
+      $options['headers']['Host'] = $uri['host'] . ($port != 443 ? ':' . $port : '');
+      break;
+
+    default:
+      $result->error = 'invalid schema ' . $uri['scheme'];
+      $result->code = -1003;
+      return $result;
+  }
+
+  if (empty($options['context'])) {
+    $fp = @stream_socket_client($socket, $errno, $errstr, $options['timeout']);
+  }
+  else {
+    // Create a stream with context. Allows verification of a SSL certificate.
+    $fp = @stream_socket_client($socket, $errno, $errstr, $options['timeout'], STREAM_CLIENT_CONNECT, $options['context']);
+  }
+
+  // Make sure the socket opened properly.
+  if (!$fp) {
+    // When a network error occurs, we use a negative number so it does not
+    // clash with the HTTP status codes.
+    $result->code = -$errno;
+    $result->error = trim($errstr) ? trim($errstr) : t('Error opening socket @socket', array('@socket' => $socket));
+
+    return $result;
+  }
+
+  // Construct the path to act on.
+  $path = isset($uri['path']) ? $uri['path'] : '/';
+  if (isset($uri['query'])) {
+    $path .= '?' . $uri['query'];
+  }
+
+  // Only add Content-Length if we actually have any content or if it is a POST
+  // or PUT request. Some non-standard servers get confused by Content-Length in
+  // at least HEAD/GET requests, and Squid always requires Content-Length in
+  // POST/PUT requests.
+  $content_length = strlen($options['data']);
+  if ($content_length > 0 || $options['method'] == 'POST' || $options['method'] == 'PUT') {
+    $options['headers']['Content-Length'] = $content_length;
+  }
+
+  // If the server URL has a user then attempt to use basic authentication.
+  if (isset($uri['user'])) {
+    $options['headers']['Authorization'] = 'Basic ' . base64_encode($uri['user'] . (isset($uri['pass']) ? ':' . $uri['pass'] : ''));
+  }
+
+  $request = $options['method'] . ' ' . $path . " HTTP/1.0\r\n";
+  foreach ($options['headers'] as $name => $value) {
+    $request .= $name . ': ' . trim($value) . "\r\n";
+  }
+  $request .= "\r\n" . $options['data'];
+  $result->request = $request;
+  // Calculate how much time is left of the original timeout value.
+  $timeout = $options['timeout'] - _mydigipass_timer_read($timer) / 1000;
+  if ($timeout > 0) {
+    stream_set_timeout($fp, floor($timeout), floor(1000000 * fmod($timeout, 1)));
+    fwrite($fp, $request);
+  }
+
+  // Fetch response. Due to PHP bugs like http://bugs.php.net/bug.php?id=43782
+  // and http://bugs.php.net/bug.php?id=46049 we can't rely on feof(), but
+  // instead must invoke stream_get_meta_data() each iteration.
+  $info = stream_get_meta_data($fp);
+  $alive = !$info['eof'] && !$info['timed_out'];
+  $response = '';
+
+  while ($alive) {
+    // Calculate how much time is left of the original timeout value.
+    $timeout = $options['timeout'] - _mydigipass_timer_read($timer) / 1000;
+    if ($timeout <= 0) {
+      $info['timed_out'] = TRUE;
+      break;
+    }
+    stream_set_timeout($fp, floor($timeout), floor(1000000 * fmod($timeout, 1)));
+    $chunk = fread($fp, 1024);
+    $response .= $chunk;
+    $info = stream_get_meta_data($fp);
+    $alive = !$info['eof'] && !$info['timed_out'] && $chunk;
+  }
+  fclose($fp);
+
+  if ($info['timed_out']) {
+    $result->code = HTTP_REQUEST_TIMEOUT;
+    $result->error = 'request timed out';
+    return $result;
+  }
+  // Parse response headers from the response body.
+  // Be tolerant of malformed HTTP responses that separate header and body with
+  // \n\n or \r\r instead of \r\n\r\n.
+  list($response, $result->data) = preg_split("/\r\n\r\n|\n\n|\r\r/", $response, 2);
+  $response = preg_split("/\r\n|\n|\r/", $response);
+
+  // Parse the response status line.
+  list($protocol, $code, $status_message) = explode(' ', trim(array_shift($response)), 3);
+  $result->protocol = $protocol;
+  $result->status_message = $status_message;
+
+  $result->headers = array();
+
+  // Parse the response headers.
+  while ($line = trim(array_shift($response))) {
+    list($name, $value) = explode(':', $line, 2);
+    $name = strtolower($name);
+    if (isset($result->headers[$name]) && $name == 'set-cookie') {
+      // RFC 2109: the Set-Cookie response header comprises the token Set-
+      // Cookie:, followed by a comma-separated list of one or more cookies.
+      $result->headers[$name] .= ',' . trim($value);
+    }
+    else {
+      $result->headers[$name] = trim($value);
+    }
+  }
+
+  $responses = array(
+    100 => 'Continue',
+    101 => 'Switching Protocols',
+    200 => 'OK',
+    201 => 'Created',
+    202 => 'Accepted',
+    203 => 'Non-Authoritative Information',
+    204 => 'No Content',
+    205 => 'Reset Content',
+    206 => 'Partial Content',
+    300 => 'Multiple Choices',
+    301 => 'Moved Permanently',
+    302 => 'Found',
+    303 => 'See Other',
+    304 => 'Not Modified',
+    305 => 'Use Proxy',
+    307 => 'Temporary Redirect',
+    400 => 'Bad Request',
+    401 => 'Unauthorized',
+    402 => 'Payment Required',
+    403 => 'Forbidden',
+    404 => 'Not Found',
+    405 => 'Method Not Allowed',
+    406 => 'Not Acceptable',
+    407 => 'Proxy Authentication Required',
+    408 => 'Request Time-out',
+    409 => 'Conflict',
+    410 => 'Gone',
+    411 => 'Length Required',
+    412 => 'Precondition Failed',
+    413 => 'Request Entity Too Large',
+    414 => 'Request-URI Too Large',
+    415 => 'Unsupported Media Type',
+    416 => 'Requested range not satisfiable',
+    417 => 'Expectation Failed',
+    500 => 'Internal Server Error',
+    501 => 'Not Implemented',
+    502 => 'Bad Gateway',
+    503 => 'Service Unavailable',
+    504 => 'Gateway Time-out',
+    505 => 'HTTP Version not supported',
+  );
+  // RFC 2616 states that all unknown HTTP codes must be treated the same as the
+  // base code in their class.
+  if (!isset($responses[$code])) {
+    $code = floor($code / 100) * 100;
+  }
+  $result->code = $code;
+
+  switch ($code) {
+    // 200 = OK.
+    // 304 = Not modified.
+    case 200:
+    case 304:
+      break;
+
+    // 301: Moved permanently.
+    // 302: Moved temporarily.
+    // 307: Moved temporarily.
+    case 301:
+    case 302:
+    case 307:
+      $location = $result->headers['location'];
+      $options['timeout'] -= _mydigipass_timer_read($timer) / 1000;
+      if ($options['timeout'] <= 0) {
+        $result->code = HTTP_REQUEST_TIMEOUT;
+        $result->error = 'request timed out';
+      }
+      elseif ($options['max_redirects']) {
+        // Redirect to the new location.
+        $options['max_redirects']--;
+        $result = _mydigipass_http_request($location, $options);
+        $result->redirect_code = $code;
+      }
+      if (!isset($result->redirect_url)) {
+        $result->redirect_url = $location;
+      }
+      break;
+
+    default:
+      $result->error = $status_message;
+  }
+
+  return $result;
+}
+
+/**
+ * Generates an SSL context to be used for SSL certificate validation.
+ *
+ * Helper function which returns an array which can be used by
+ * the stream_context_create function.
+ *
+ * @return array
+ *   An array containing the necessary SSL context options to check the
+ *   validity of the SSL server certificate.
+ */
+function _mydigipass_create_ssl_context() {
+  if (variable_get('mydigipass_validate_certificate', 'disabled') == 'enabled') {
+    $context = array(
+      'ssl' => array(
+        'verify_peer' => TRUE,
+        'allow_self_signed' => FALSE,
+        'CN_match' => 'www.mydigipass.com',
+      ));
+    $cafile = variable_get('mydigipass_validate_certificate_cafile', '');
+    if (!empty($cafile)) {
+      $context['ssl']['cafile'] = $cafile;
+    }
+  }
+  else {
+    $context = array();
+  }
+
+  return $context;
+}
+
+/**
+ * Informs MYDIGIPASS.COM when linking a DRUPAL user with MYDIGIPASS.COM.
+ *
+ * After linking a MYDIGIPASS.COM user with a DRUPAL user, MYDIGIPASS.COM has
+ * to be informed of this link. If this is not done, then the user risks of not
+ * being able to login after several times.
+ *
+ * @return bool
+ *   A boolean indicating whether contacting the MYDIGIPASS.COM API succeeded.
+ */
+function _mydigipass_api_uuid_connected($uuid) {
+  $api_endpoint = _mydigipass_get_endpoint_url('api-uuids-connected');
+  $options = array(
+    'method' => 'POST',
+    'headers' => array(
+      'Accept' => 'application/json',
+      'Content-Type' => 'application/json',
+      'Authorization' => 'Basic ' . base64_encode(variable_get('mydigipass_client_id', '') . ':' . variable_get('mydigipass_client_secret', '')),
+    ),
+    'data' => json_encode(array("uuids" => array($uuid))),
+  );
+
+  $ssl_context_array = _mydigipass_create_ssl_context();
+  if ($ssl_context_array === FALSE) {
+    // A validation check failed.
+    return FALSE;
+  }
+  $options['context'] = stream_context_create($ssl_context_array);
+  $result = _mydigipass_http_request($api_endpoint, $options);
+
+  // Fail secure: set return value to FALSE.
+  $return = FALSE;
+
+  switch ($result->code) {
+    case 201:
+      $return = TRUE;
+      watchdog('mydigipass', 'Successfully informed MYDIGIPASS.COM of linked user with UUID %uuid.', array('%uuid' => $uuid));
+      break;
+
+    default:
+      watchdog('mydigipass', 'An error occurred while contacting the MYDIGIPASS.COM connect API endpoint for UUID %uuid. The action will be retried during the next cron run.', array('%uuid' => $uuid), WATCHDOG_WARNING);
+      variable_set('mydigipass_connect_api_inconsistency', TRUE);
+  }
+
+  return $return;
+}
+
+/**
+ * Informs MYDIGIPASS.COM when unlinking a DRUPAL user with MYDIGIPASS.COM.
+ *
+ * After unlinking a MYDIGIPASS.COM user with a DRUPAL user, MYDIGIPASS.COM has
+ * to be informed of this unlinking. This has an impact on the fees that have
+ * to be paid to MYDIGIPASS.COM.
+ *
+ * @return bool
+ *   A boolean indicating whether contacting the MYDIGIPASS.COM API succeeded.
+ */
+function _mydigipass_api_uuid_disconnected($uuid) {
+  $api_endpoint = _mydigipass_get_endpoint_url('api-uuids-disconnected');
+  $options = array(
+    'method' => 'POST',
+    'headers' => array(
+      'Accept' => 'application/json',
+      'Content-Type' => 'application/json',
+      'Authorization' => 'Basic ' . base64_encode(variable_get('mydigipass_client_id', '') . ':' . variable_get('mydigipass_client_secret', '')),
+    ),
+    'data' => json_encode(array("uuids" => array($uuid))),
+  );
+
+  $ssl_context_array = _mydigipass_create_ssl_context();
+  if ($ssl_context_array === FALSE) {
+    // A validation check failed.
+    return FALSE;
+  }
+  $options['context'] = stream_context_create($ssl_context_array);
+  $result = _mydigipass_http_request($api_endpoint, $options);
+
+  // Fail secure: set return value to FALSE.
+  $return = FALSE;
+
+  switch ($result->code) {
+    case 201:
+      $return = TRUE;
+      watchdog('mydigipass', 'Successfully informed MYDIGIPASS.COM of unlinked user with UUID %uuid.', array('%uuid' => $uuid));
+      break;
+
+    default:
+      watchdog('mydigipass', 'An error occurred while contacting the MYDIGIPASS.COM disconnect API endpoint for UUID %uuid. The action will be retried during the next cron run.', array('%uuid' => $uuid), WATCHDOG_WARNING);
+      variable_set('mydigipass_connect_api_inconsistency', TRUE);
+  }
+
+  return $return;
+}
+
+/**
+ * Sync the local database of connected users with the MYDIGIPASS.COM database.
+ *
+ * This function will compare the local database of connected users with the
+ * list received from MYDIGIPASS.COM. If there are inconsistencies, then the
+ * remote database will be updated.
+ *
+ * @return bool
+ *   A boolean indicating whether the synchronisation succeeded or not.
+ */
+function _mydigipass_sync_connected_users() {
+  // Get the list of connected users from MYDIGIPASS.COM.
+  $api_endpoint = _mydigipass_get_endpoint_url('api-uuids-connected');
+  $options = array(
+    'method' => 'GET',
+    'headers' => array(
+      'Authorization' => 'Basic ' . base64_encode(variable_get('mydigipass_client_id', '') . ':' . variable_get('mydigipass_client_secret', '')),
+      'Accept' => 'application/json',
+    ),
+  );
+
+  $ssl_context_array = _mydigipass_create_ssl_context();
+  if ($ssl_context_array === FALSE) {
+    // A validation check failed.
+    return FALSE;
+  }
+  $options['context'] = stream_context_create($ssl_context_array);
+  $result = _mydigipass_http_request($api_endpoint, $options);
+
+  switch ($result->code) {
+    case 200:
+      $response = json_decode($result->data);
+      $mdp_uuids = (is_object($response) ? $response->uuids : array());
+      break;
+
+    default:
+      watchdog('mydigipass', 'An error occurred while synchronizing the local database of connected users with the MYDIGIPASS.COM database. The action will be retried during the next cron run.', array(), WATCHDOG_WARNING);
+      variable_set('mydigipass_connect_api_inconsistency', TRUE);
+      return FALSE;
+  }
+
+  // Get the local list of connected users.
+  $sql = 'SELECT mdp_uuid FROM {mydigipass_user_link}';
+  $result = db_query($sql);
+  $local_uuids = array();
+  while ($row = db_fetch_object($result)) {
+    $local_uuids[] = $row->mdp_uuid;
+  }
+
+  // Variable to contain the result of the sync action.
+  $sync_result = TRUE;
+
+  // Check which UUIDs exist locally and not at MYDIGIPASS.COM.
+  // This can occur on 2 occasions:
+  //  1) When users were already connected to MYDIGIPASS.COM, but the connected
+  //     API is used for the first time (i.e. on update from 6.x-1.2 to 6.x-1.3.
+  //  2) When a user removed the Drupal app from his launchpad.
+  // In any case, we will tell MYDIGIPASS.COM that the uuid is still connected
+  // locally.
+  $diff = array_diff($local_uuids, $mdp_uuids);
+  foreach ($diff as $uuid) {
+    $sync_result &= _mydigipass_api_uuid_connected($uuid);
+  }
+
+  // Check which UUIDs exist at MYDIGIPASS.COM and not locally.
+  // This can occur when access was revoked locally, but the sync with
+  // MYDIGIPASS.COM has failed. We will tell MYDIGIPASS.COM that the uuid is
+  // no longer connected locally.
+  $diff = array_diff($mdp_uuids, $local_uuids);
+  foreach ($diff as $uuid) {
+    $sync_result &= _mydigipass_api_uuid_disconnected($uuid);
+  }
+
+  if ($sync_result) {
+    watchdog('mydigipass', 'The local database of connected users was successfully synchronized with the MYDIGIPASS.COM database.');
+  }
+  else {
+    watchdog('mydigipass', 'An error occurred while synchronizing the local database of connected users with the MYDIGIPASS.COM database. The action will be retried during the next cron run.', array(), WATCHDOG_WARNING);
+  }
+
+  return $sync_result;
 }

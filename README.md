@@ -1,8 +1,8 @@
--- SUMMARY --
+# SUMMARY #
 
-The mydigipass module allows to easily integrate the MYDIGIPASS.COM service in 
-a Drupal website. MYDIGIPASS.COM is an authentication service which uses 
-two-factor authentication and relies on one-time passwords to protect access 
+The mydigipass module allows to easily integrate the MYDIGIPASS.COM service in
+a Drupal website. MYDIGIPASS.COM is an authentication service which uses
+two-factor authentication and relies on one-time passwords to protect access
 to your website.
 By enabling this module on your website, your end-users can authenticate
 themselves using MYDIGIPASS.COM instead of using a static password. The module
@@ -17,13 +17,13 @@ To submit bug reports and feature suggestions, or to track changes:
   http://drupal.org/project/issues/mydigipass
 
 
--- REQUIREMENTS --
+# REQUIREMENTS #
 
 This module does not rely on other modules. However, the webserver on which the
 Drupal website is hosted must be able to make connections to the MYDIGIPASS.COM
 service on the Internet. If you don't know whether your webserver can make such
 connections, a "Test connectivity" button has been foreseen in the module's
-administration pages which allow to check whether it is possible to make
+administration pages which allows to check whether it is possible to make
 connections to MYDIGIPASS.COM or not. In order to connect to MYDIGIPASS.COM,
 the module uses the same functionality as used by Drupal to check for updates.
 
@@ -31,35 +31,35 @@ When using this module on a production website, it is strongly recommended that
 your website is reachable over https.
 
 
--- INSTALLATION --
+# INSTALLATION #
 
 * Install as usual, see http://drupal.org/node/70151 for further information.
 
 
--- CONFIGURATION --
+# CONFIGURATION #
 
 * In order to be able to use the MYDIGIPASS.COM service, you need to have your
   website registered at MYDIGIPASS.COM. For testing purposes, you can create
   a free account on https://developer.mydigipass.com/ and link your website.
-  This will allow you to test the integration with MYDIGIPASS.COM. For 
+  This will allow you to test the integration with MYDIGIPASS.COM. For
   production purposes, you need to contact MYDIGIPASS.COM to have your website
   registered in the production instance of MYDIGIPASS.COM.
-  
+
 * When registering your website at MYDIGIPASS.COM you are asked to submit the
-  callback URL of your website. The default location for the callback when 
+  callback URL of your website. The default location for the callback when
   using this module is:
-  
+
   - /mydigipass/callback          (when clean URLs are enabled)
   - /?q=mydigipass/callback       (when clean URLs are disabled)
-  
+
   Therefore if your website's domain is www.example.com, then your callback URL
   is the following when you are using clean URLs:
-  http://www.example.com/mydigipass/callback
-  
-* Configure the MYDIGIPASS.COM settings in 
+  https://www.example.com/mydigipass/callback
+
+* Configure the MYDIGIPASS.COM settings in
   Administration > Settings > MYDIGIPASS.COM:
 
-  - Select whether you are using the sandbox instance or the production 
+  - Select whether you are using the sandbox instance or the production
     instance of MYDIGIPASS.COM.
 
     If you registered your website yourself on MYDIGIPASS.COM developer's
@@ -75,8 +75,19 @@ your website is reachable over https.
   - Enable the integration by ticking the "Enable MYDIGIPASS.COM integration"
     checkbox.
 
+* Configure SSL certificate validation in
+  Administration > Settings > MYDIGIPASS.COM > Security settings:
 
--- CUSTOMIZATION --
+  1. Select "Enable server certificate validation."
+  2. (optional, but sometimes required - depends on the PHP configuration)
+     Upload a bundle of CA certificates to a folder which is accessible by the
+     web server (e.g. to sites/all/files/) and enter the location and
+     filename of the downloaded certificate authority file in the textfield. If
+     the certificate bundle is called "ca-bundle.pem" and you uploaded it to
+     "sites/all/files/", then enter "sites/all/files/ca-bundle.pem"
+  3. Click "Save configuration".
+
+# CUSTOMIZATION #
 
 * After enabling the module, the MYDIGIPASS.COM button is automatically added
   to the login form, to the registration form and to the user's profile. The
@@ -85,7 +96,7 @@ your website is reachable over https.
   Administration > Settings > MYDIGIPASS.COM > Button style
 
 
--- TROUBLESHOOTING --
+# TROUBLESHOOTING #
 
 * If the module can't connect to MYDIGIPASS.COM, use the "Check connectivity"
   button to check whether your website has the necessary PHP extensions enabled
@@ -95,16 +106,16 @@ your website is reachable over https.
 
   - Is the client_id and the client_secret appropriately set?
 
-  - Has the proper instance of MYDIGIPASS.COM to been selected (i.e. sandbox 
+  - Has the proper instance of MYDIGIPASS.COM been selected (i.e. sandbox
     instance versus production instance).
 
   - Have you registered the correct callback URL at MYDIGIPASS.COM? For example
     you might have registered WWW.example.com/mydigipass/callback whereas you
-    might currently be accessing you website without the WWW prefix (being
+    might currently be accessing your website without the WWW prefix (being
     example.com).
 
 
--- CONTACT --
+# CONTACT #
 
 Current maintainer:
 * Lode Vanstechelman - http://drupal.org/user/657472
