@@ -90,6 +90,9 @@ function mydigipass_uninstall() {
   variable_del('mydigipass_endpoint_url_data_endpoint');
   variable_del('mydigipass_endpoint_url_api_uuids_connected');
   variable_del('mydigipass_endpoint_url_api_uuids_disconnected');
+  variable_del('mydigipass_origin');
+  variable_del('mydigipass_languages');
+  //variable_del('mydigipass_logout_feature');
 }
 
 /**
@@ -230,9 +233,34 @@ function mydigipass_update_6100() {
  *  - This update first uses the connected API. All already connected
  *    users should be synchronized with MYDIGIPASS.COM.
  */
-function mydigipass_update_6300() {
+function mydigipass_update_6101() {
   // Important to negate the result of sync_connected_users:
   // api_inconsistency = TRUE if sync_connected_users = FALSE!
   variable_set('mydigipass_connect_api_inconsistency', !_mydigipass_sync_connected_users());
+  return array();
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Changes: sets the new variable mydigipass_origin to the appropriate value
+ * depending on the already selected environment. Also sets the new variable
+ * mydigipass_languages to the list of languages that are currently supported
+ * by MYDIGIPASS.COM.
+ */
+function mydigipass_update_6102() {
+  $environment = variable_get('mydigipass_environment', '');
+  switch ($environment) {
+    case 'test':
+      variable_set('mydigipass_origin', 'https://sandbox.mydigipass.com');
+      break;
+
+    case 'production':
+      variable_set('mydigipass_origin', 'https://www.mydigipass.com');
+      break;
+  }
+
+  variable_set('mydigipass_languages', 'en,fr,de,nl,it');
+
   return array();
 }

@@ -19,7 +19,7 @@ function mydigipass_menu() {
     'title' => 'MYDIGIPASS.COM',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mydigipass_admin_settings'),
-    'description' => 'Configure MYDIGIPASS.COM settings',
+    'description' => 'Configure MYDIGIPASS.COM settings.',
     'access arguments' => array('administer mydigipass'),
     'file' => 'mydigipass.admin.inc.php',
   );
@@ -34,7 +34,7 @@ function mydigipass_menu() {
     'title' => 'User data fields',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mydigipass_admin_settings_user_profile_fields_form'),
-    'description' => "Configure the MYDIGIPASS.COM user data fields which are shown in the user's profile",
+    'description' => "Configure the MYDIGIPASS.COM user data fields which are shown in the user's profile.",
     'access arguments' => array('administer mydigipass'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'mydigipass.admin.inc.php',
@@ -45,7 +45,7 @@ function mydigipass_menu() {
     'title' => 'Button style',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mydigipass_admin_settings_button_style_form'),
-    'description' => 'Configure the MYDIGIPASS.COM buttons which are shown in different forms',
+    'description' => 'Configure the MYDIGIPASS.COM buttons which are shown in different forms.',
     'access arguments' => array('administer mydigipass'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'mydigipass.admin.inc.php',
@@ -164,6 +164,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
             'data-style' => variable_get('mydigipass_login_form_style', 'default'),
             'data-text' => variable_get('mydigipass_login_form_text', 'secure-login'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
+            'data-origin' => check_plain(variable_get('mydigipass_origin', '')),
           ),
         )),
       );
@@ -211,6 +212,7 @@ function mydigipass_form_alter(&$form, $form_state, $form_id) {
             'data-style' => variable_get('mydigipass_register_form_style', 'large'),
             'data-text' => variable_get('mydigipass_register_form_text', 'sign-up'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
+            'data-origin' => check_plain(variable_get('mydigipass_origin', '')),
           ),
         )),
       );
@@ -375,7 +377,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
         $sql = "SELECT 1 FROM {mydigipass_user_link} UL WHERE UL.drupal_uid = %d";
         $result = db_result(db_query($sql, $account->uid));
 
-        if (($result == 1) && empty($_SESSION['mydigipass_uuid'])) {
+        if (($result == 1) && !mydigipass_logged_in_with_mydigipass()) {
           global $user;
           // Load the anonymous user.
           $user = drupal_anonymous_user();
@@ -390,6 +392,29 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
       break;
   }
 }
+
+/**
+ * Implements hook_menu_link_alter().
+ */
+/*
+function mydigipass_menu_link_alter(&$item) {
+  // Conditions to add the logout-feature to the logout links:
+  // 1. User must be logged in (otherwise there is no need for a logout-link).
+  // 2. User must be logged in with MYDIGIPASS.COM (UUID is set in $_SESSION).
+  // 3. Logout feature must be enabled.
+  // 4. Link path must be user/logout.
+  if (user_is_logged_in() && mydigipass_logged_in_with_mydigipass() && (variable_get('mydigipass_logout_feature', 0) == 1) && ($item['link_path'] == "logout")) {
+    if (isset($item['options']['attributes']['class']) && !empty($item['options']['attributes']['class'])) {
+      $item['options']['attributes']['class'] .= ' dpplus-logout';
+    }
+    else {
+      $item['options']['attributes']['class'] = 'dpplus-logout';
+    }
+    $item['options']['attributes']['data-origin'] = check_plain(variable_get('mydigipass_origin', ''));
+    $item['options']['attributes']['data-client-id'] = check_plain(variable_get('mydigipass_client_id', ''));
+  }
+}
+*/
 
 /**
  * Form validation handler to enforce the authentication mode during login.
@@ -607,6 +632,7 @@ function mydigipass_form_profile($edit, $account) {
             'data-style' => variable_get('mydigipass_link_form_style', 'large'),
             'data-text' => variable_get('mydigipass_link_form_text', 'connect'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
+            'data-origin' => check_plain(variable_get('mydigipass_origin', '')),
           ),
         )),
       );
@@ -670,12 +696,12 @@ function _mydigipass_get_endpoint_url($endpoint) {
   $environment = variable_get('mydigipass_environment', '');
 
   // Check if the environment is not set (i.e. the module is not yet
-  // configured) or if it is set to a wrong value.
+  // configured).
   if ($environment == '') {
     return '';
   }
 
-  $base_url = ($environment == 'test' ? 'https://sandbox.mydigipass.com' : ($environment == 'production' ? 'https://mydigipass.com' : ''));
+  $base_url = variable_get('mydigipass_origin', '');
 
   $return = '';
   switch ($endpoint) {
@@ -688,14 +714,22 @@ function _mydigipass_get_endpoint_url($endpoint) {
       break;
 
     case 'dp_connect.js':
-      if ($environment == 'test') {
-        $return = 'https://mydigipass.com/sandbox/dp_connect.js';
+      global $language;
+      $supported_languages = variable_get('mydigipass_languages', 'en');
+      $supported_languages = explode(',', $supported_languages);
+      $supported_languages = array_map('trim', $supported_languages);
+      // If the current language is in the list of supported languages, then it
+      // will be used, otherwise English will be used.
+      $lang = (in_array($language->language, $supported_languages) ? $language->language : 'en');
+
+      if (($environment == 'test') || ($environment == 'production')) {
+        $return = 'https://static.mydigipass.com/' . $lang . '/dp_connect.js';
       }
       elseif ($environment == 'custom') {
-        $return = variable_get('mydigipass_endpoint_url_dp_connect_js', '');
-      }
-      else {
-        $return = $base_url . '/dp_connect.js';
+        $custom_url = variable_get('mydigipass_endpoint_url_dp_connect_js', '');
+        // The string %lang can be used in a custom URL to indicate where the
+        // selected language has to be set.
+        $return = str_replace('%lang', $lang, $custom_url);
       }
       break;
 
@@ -708,7 +742,7 @@ function _mydigipass_get_endpoint_url($endpoint) {
       break;
 
   }
-  return $return;
+  return check_plain($return);
 }
 
 /**
@@ -1250,6 +1284,9 @@ function _mydigipass_create_ssl_context() {
  * to be informed of this link. If this is not done, then the user risks of not
  * being able to login after several times.
  *
+ * @param string $uuid
+ *   A MYDIGIPASS.COM UUID.
+ *
  * @return bool
  *   A boolean indicating whether contacting the MYDIGIPASS.COM API succeeded.
  */
@@ -1296,6 +1333,9 @@ function _mydigipass_api_uuid_connected($uuid) {
  * After unlinking a MYDIGIPASS.COM user with a DRUPAL user, MYDIGIPASS.COM has
  * to be informed of this unlinking. This has an impact on the fees that have
  * to be paid to MYDIGIPASS.COM.
+ *
+ * @param string $uuid
+ *   A MYDIGIPASS.COM UUID.
  *
  * @return bool
  *   A boolean indicating whether contacting the MYDIGIPASS.COM API succeeded.
@@ -1418,4 +1458,71 @@ function _mydigipass_sync_connected_users() {
   }
 
   return $sync_result;
+}
+
+/**
+ * Allows to check whether the current user is logged in with MYDIGIPASS.COM.
+ *
+ * @return bool
+ *   A boolean indicating whether the user is logged in with MYDIGIPASS.COM. A
+ *   return value of TRUE means that the user is logged in with MYDIGIPASS.COM.
+ */
+function mydigipass_logged_in_with_mydigipass() {
+  return !empty($_SESSION['mydigipass_uuid']);
+}
+
+/**
+ * Return the MYDIGIPASS.COM user data so that it can be used by other modules.
+ *
+ * This function returns an array containing the MYDIGIPASS.COM user data of
+ * a certain user based on the Drupal ID of the user. The array keys are the
+ * attribute names. For example: 'email' => 'user@example.com'.
+ *
+ * @param string $uid
+ *   A Drupal user ID.
+ *
+ * @return array
+ *   An array containing the MYDIGIPASS.COM user data of a Drupal user. If the
+ *   user is not linked with a MYDIGIPASS.COM account, an empty array will be
+ *   returned. If the user is linked with MYDIGIPASS.COM, then at least the
+ *   MYDIGIPASS.COM UUID and the email address will be returned.
+ */
+function mydigipass_user_data_by_drupal_uid($uid) {
+  $sql = "SELECT * FROM {mydigipass_user_link} UL LEFT JOIN {mydigipass_user_data} UD ON UL.mdp_uuid = UD.mdp_uuid WHERE UL.drupal_uid = %d";
+  $result = db_query($sql, $uid);
+
+  $user_data = array();
+  while ($row = db_fetch_object($result)) {
+    $user_data[check_plain($row->attribute_key)] = check_plain($row->attribute_value);
+  }
+
+  return $user_data;
+}
+
+/**
+ * Return the MYDIGIPASS.COM user data so that it can be used by other modules.
+ *
+ * This function returns an array containing the MYDIGIPASS.COM user data of
+ * a certain user based on a MYDIGIPASS.COM UUID. The array keys are the
+ * attribute names. For example: 'email' => 'user@example.com'.
+ *
+ * @param string $uuid
+ *   A MYDIGIPASS.COM UUID.
+ *
+ * @return array
+ *   An array containing the MYDIGIPASS.COM user data of a user. If the UUID is
+ *   not known in the database, an empty array will be returned. If the user is
+ *   linked with MYDIGIPASS.COM, then at least the MYDIGIPASS.COM UUID and the
+ *   email address will be returned.
+ */
+function mydigipass_user_data_by_mydigipass_uuid($uuid) {
+  $sql = "SELECT * FROM {mydigipass_user_data} UD WHERE UD.mdp_uuid = '%s'";
+  $result = db_query($sql, $uuid);
+
+  $user_data = array();
+  while ($row = db_fetch_object($result)) {
+    $user_data[check_plain($row->attribute_key)] = check_plain($row->attribute_value);
+  }
+
+  return $user_data;
 }
