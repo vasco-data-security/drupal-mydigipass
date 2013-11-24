@@ -122,14 +122,17 @@ function mydigipass_callback() {
   db_delete('mydigipass_user_data')
     ->condition('mdp_uuid', $user_data_array['uuid'])
     ->execute();
+  // Insert the user data using a multi-insert query.
+  $query = db_insert('mydigipass_user_data')
+    ->fields(array('mdp_uuid', 'attribute_key', 'attribute_value'));
   foreach ($user_data_array as $key => $value) {
-    $fields = array(
+    $query->values(array(
       'mdp_uuid' => $user_data_array['uuid'],
       'attribute_key' => $key,
       'attribute_value' => $value,
-    );
-    db_insert('mydigipass_user_data')->fields($fields)->execute();
+    ));
   }
+  $query->execute();
 
   // At this point, the end-user has authenticated himself to MYDIGIPASS.COM.
   // Check whether this end-user is already linked to a Drupal user.
@@ -207,7 +210,7 @@ function mydigipass_callback() {
     }
     else {
       // Show the link user wizard or the mydigipass_user_register form.
-      if ($state_array['action'] == 'register') {
+      if (isset($state_array['action']) && ($state_array['action'] == 'register')) {
         drupal_goto('mydigipass/link/new_user');
       }
       else {
