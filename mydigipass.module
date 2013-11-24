@@ -27,6 +27,7 @@ function mydigipass_menu() {
   $items['admin/settings/mydigipass/account_settings'] = array(
     'title' => 'Account settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 10,
   );
 
   $items['admin/settings/mydigipass/user_data_fields'] = array(
@@ -37,6 +38,7 @@ function mydigipass_menu() {
     'access arguments' => array('administer mydigipass'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'mydigipass.admin.inc.php',
+    'weight' => 30,
   );
 
   $items['admin/settings/mydigipass/button_style'] = array(
@@ -47,16 +49,18 @@ function mydigipass_menu() {
     'access arguments' => array('administer mydigipass'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'mydigipass.admin.inc.php',
+    'weight' => 20,
   );
 
-  $items['admin/settings/mydigipass/security_settings'] = array(
-    'title' => 'Security settings',
+  $items['admin/settings/mydigipass/advanced_settings'] = array(
+    'title' => 'Advanced settings',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('mydigipass_admin_settings_security_form'),
-    'description' => 'Configure security settings such as server certificate validation',
+    'page arguments' => array('mydigipass_admin_settings_advanced_form'),
+    'description' => 'Configure MYDIGIPASS.COM advanced settings, such as SSL server certificate validation and MYDIGIPASS.COM endpoint API URLs.',
     'access arguments' => array('administer mydigipass'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'mydigipass.admin.inc.php',
+    'weight' => 40,
   );
 
   $items['mydigipass/callback'] = array(
@@ -655,7 +659,8 @@ function mydigipass_form_profile_unlink($form, &$form_state) {
  *
  * @param string $endpoint
  *   The endpoint for which the URL is requested. Allowed values are
- *   'token_endpoint' and 'data_endpoint'.
+ *   'token_endpoint', 'data_endpoint', 'dp_connect.js', 'api-uuids-connected'
+ *   and 'api-uuids-disconnected'.
  *
  * @return string
  *   The URL of the endpoint of an empty string is the environment is not yet
@@ -663,33 +668,47 @@ function mydigipass_form_profile_unlink($form, &$form_state) {
  */
 function _mydigipass_get_endpoint_url($endpoint) {
   $environment = variable_get('mydigipass_environment', '');
-  $base_url = ($environment == 'test' ? 'https://sandbox.mydigipass.com' : ($environment == 'production' ? 'https://mydigipass.com' : ''));
 
   // Check if the environment is not set (i.e. the module is not yet
   // configured) or if it is set to a wrong value.
-  if (($environment == '') || ($base_url == '')) {
+  if ($environment == '') {
     return '';
   }
 
+  $base_url = ($environment == 'test' ? 'https://sandbox.mydigipass.com' : ($environment == 'production' ? 'https://mydigipass.com' : ''));
+
+  $return = '';
   switch ($endpoint) {
     case 'token_endpoint':
-      return $base_url . '/oauth/token';
+      $return = ($environment == 'custom' ? variable_get('mydigipass_endpoint_url_token_endpoint', '') : $base_url . '/oauth/token');
+      break;
 
     case 'data_endpoint':
-      return $base_url . '/oauth/user_data';
+      $return = ($environment == 'custom' ? variable_get('mydigipass_endpoint_url_data_endpoint', '') : $base_url . '/oauth/user_data');
+      break;
 
     case 'dp_connect.js':
-      return $base_url . '/dp_connect.js';
+      if ($environment == 'test') {
+        $return = 'https://mydigipass.com/sandbox/dp_connect.js';
+      }
+      elseif ($environment == 'custom') {
+        $return = variable_get('mydigipass_endpoint_url_dp_connect_js', '');
+      }
+      else {
+        $return = $base_url . '/dp_connect.js';
+      }
+      break;
 
     case 'api-uuids-connected':
-      return $base_url . '/api/uuids/connected';
+      $return = ($environment == 'custom' ? variable_get('mydigipass_endpoint_url_api_uuids_connected', '') : $base_url . '/api/uuids/connected');
+      break;
 
     case 'api-uuids-disconnected':
-      return $base_url . '/api/uuids/disconnected';
+      $return = ($environment == 'custom' ? variable_get('mydigipass_endpoint_url_api_uuids_disconnected', '') : $base_url . '/api/uuids/disconnected');
+      break;
 
   }
-
-  return '';
+  return $return;
 }
 
 /**

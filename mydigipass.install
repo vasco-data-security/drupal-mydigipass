@@ -85,6 +85,11 @@ function mydigipass_uninstall() {
   variable_del('mydigipass_validate_certificate');
   variable_del('mydigipass_validate_certificate_cafile');
   variable_del('mydigipass_connect_api_inconsistency');
+  variable_del('mydigipass_endpoint_url_dp_connect_js');
+  variable_del('mydigipass_endpoint_url_token_endpoint');
+  variable_del('mydigipass_endpoint_url_data_endpoint');
+  variable_del('mydigipass_endpoint_url_api_uuids_connected');
+  variable_del('mydigipass_endpoint_url_api_uuids_disconnected');
 }
 
 /**
