@@ -4,9 +4,9 @@ package = Security
 core = 6.x
 php = 5.0
 
-; Information added by  packaging script on 2013-11-17
-version = "6.x-1.5"
+; Information added by Drupal.org packaging script on 2014-11-27
+version = "6.x-1.6"
 core = "6.x"
 project = "mydigipass"
-datestamp = "1384717105"
+datestamp = "1417091584"
 

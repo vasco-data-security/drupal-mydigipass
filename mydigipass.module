@@ -1,8 +1,7 @@
 <?php
 /**
  * @file
- * mydigipass provides authentication against the MYDIGIPASS.COM service of
- * VASCO Data Security.
+ * MYDIGIPASS provides authentication against the MYDIGIPASS.COM service.
  *
  * For more information about MYDIGIPASS.COM go to https://mydigipass.com
  * To create a free account in the sandbox environment, go to
@@ -308,7 +307,7 @@ function mydigipass_user($op, &$edit, &$account, $category = NULL) {
         $account->content['summary']['mydigipass'] = array(
           '#type' => 'user_profile_item',
           '#title' => 'MYDIGIPASS.COM',
-          '#value' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
+          '#value' => (empty($mdp_email) ? t('This user account is linked to MYDIGIPASS.COM.') : t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email))),
         );
 
         // Add the known MYDIGIPASS.COM user data of which the administrator
@@ -514,6 +513,9 @@ function mydigipass_link_user_to_new_user($form, &$form_state) {
   $uuid = $_SESSION['mydigipass_uuid'];
   $sql = "SELECT attribute_value FROM {mydigipass_user_data} WHERE mdp_uuid = '%s' AND attribute_key = 'email'";
   $mail = db_result(db_query($sql, $uuid));
+  if (empty($mail)) {
+    $mail = $form_state['values']['mail'];
+  }
   $sql = "UPDATE {users} SET mail = '%s', init = '%s' WHERE uid = %d";
   db_query($sql, $form_state['values']['mail'], $mail, $user->uid);
   // Also store the email in the $user object.
@@ -577,7 +579,7 @@ function mydigipass_form_profile($edit, $account) {
     $mdp_email = db_result(db_query($sql, $account->uid));
     $form['mydigipass'][] = array(
       '#type' => 'item',
-      '#value' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
+      '#value' => (empty($mdp_email) ? t('This user account is linked to MYDIGIPASS.COM.') : t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email))),
     );
     $form['mydigipass'][] = array(
       '#type' => 'submit',
@@ -891,7 +893,7 @@ function mydigipass_link_existing_user() {
  * @return string
  *   The Base64 representation of the array.
  */
-function _mydigipass_encode_state_array($state_array) {
+function _mydigipass_encode_state_array(array $state_array) {
   return base64_encode(json_encode($state_array));
 }
 
