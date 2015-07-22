@@ -104,7 +104,7 @@ function mydigipass_admin_settings($form_state) {
     '#type' => 'checkbox',
     '#default_value' => variable_get('mydigipass_logout_feature', 0),
     '#title' => t('Enable logout feature'),
-    '#description' => 'By enabling the logout feature, users will be prompted whether they also want to log out of MYDIGIPASS.COM when logging out of this site. When logging out, the MYDIGIPASS.COM logout dialog will be shown where users can choose to also logout from MYDIGIPASS.COM or open their MYDIGIPASS.COM Launch Pad.',
+    '#description' => t('By enabling the logout feature, users will be prompted whether they also want to log out of MYDIGIPASS.COM when logging out of this site. When logging out, the MYDIGIPASS.COM logout dialog will be shown where users can choose to also logout from MYDIGIPASS.COM or open their MYDIGIPASS.COM Launch Pad.'),
   );
 
   $form['#submit'][] = 'mydigipass_admin_settings_submit';
@@ -229,6 +229,7 @@ function mydigipass_admin_settings_user_profile_fields_form($form_state) {
 function theme_mydigipass_admin_settings_user_profile_fields_form($variables) {
   $form = $variables['form'];
   $header = array(t('Show field'), t('Show as'), t('Weight'));
+  $rows = array();
 
   foreach (element_children($form['items']) as $key) {
     $element = &$form['items'][$key];
@@ -563,7 +564,10 @@ function mydigipass_admin_settings_advanced_form_validate($form, &$form_state) {
     }
     elseif (($result_without_validation->code > 0) && ($result_with_validation->code <= 0)) {
       form_set_error('mydigipass_validate_certificate_cafile',
-        t('The certificate of !url could not be validated. This probably means that the PHP application server has not been configured to have access to valid SSL root certificates. Either reconfigure PHP or enter the path to a Certificate Authority file. Check the module homepage at !url2 for instructions on where you can obtain a Certificate Authority file.', array('!url' => $url, '!url2' => l(t('http://drupal.org/project/mydigipass'), 'http://drupal.org/project/mydigipass'))));
+        t('The certificate of !url could not be validated. This probably means that the PHP application server has not been configured to have access to valid SSL root certificates. Either reconfigure PHP or enter the path to a Certificate Authority file. Check the module homepage at !url2 for instructions on where you can obtain a Certificate Authority file.', array(
+          '!url' => $url,
+          '!url2' => l(t('http://drupal.org/project/mydigipass'), 'http://drupal.org/project/mydigipass'),
+        )));
     }
     elseif (($result_without_validation->code > 0) && ($result_with_validation->code > 0)) {
       drupal_set_message(t('The certificate of !url could be successfully validated.', array('!url' => $url)));

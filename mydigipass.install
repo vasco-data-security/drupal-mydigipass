@@ -35,6 +35,7 @@ function mydigipass_requirements($phase) {
         elseif (!(function_exists('stream_socket_client') && in_array('openssl', get_loaded_extensions()))) {
           $requirements['mydigipass'] = array(
             'title' => $title,
+            'value' => $t('MYDIGIPASS.COM can not be used on this server.'),
             'description' => $t('This PHP installation lacks the necessary functions to make outbound connections.'),
             'severity' => REQUIREMENT_ERROR,
           );
@@ -43,7 +44,7 @@ function mydigipass_requirements($phase) {
           $requirements['mydigipass'] = array(
             'title' => $title,
             'value' => $t('MYDIGIPASS.COM SSL server certificate validation is disabled.'),
-            'description' => $t('It is strongly recommended to enable SSL certificate validation to detect and prevent serious attacks. Enable certificate validation !here.', array('!here' => l($t('here'), 'admin/config/services/mydigipass/security_settings'))),
+            'description' => $t('It is strongly recommended to enable SSL certificate validation to detect and prevent serious attacks. Enable certificate validation !here.', array('!here' => l($t('here'), 'admin/config/services/mydigipass/advanced_settings'))),
             'severity' => REQUIREMENT_WARNING,
           );
         }

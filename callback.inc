@@ -110,9 +110,9 @@ function mydigipass_callback() {
   // Log that the user connected via MDP.
   watchdog(
     'mydigipass',
-    'Connection from MYDIGIPASS.COM user with mail %email and UUID %uuid.',
+    'Connection from MYDIGIPASS.COM user with ' . (isset($user_data_array['email']) ? 'email %email and ' : '') . 'UUID %uuid.',
     array(
-      '%email' => $user_data_array['email'],
+      '%email' => (isset($user_data_array['email']) ? $user_data_array['email'] : ''),
       '%uuid' => $user_data_array['uuid'],
     ));
   // Mark this session as one in which a MYDIGIPASS.COM user is authenticated.
@@ -409,7 +409,7 @@ function _mydigipass_callback_get_user_data($access_token) {
  *   Returns TRUE if the CSRF token was correct, returns FALSE in all other
  *   cases.
  */
-function _mydigipass_check_csrf_token($state_array) {
+function _mydigipass_check_csrf_token(array $state_array) {
   switch ($state_array['action']) {
     case 'login':
       $return = (isset($_SESSION['mydigipass_login_csrf_token']) && ($state_array['csrf_token'] == $_SESSION['mydigipass_login_csrf_token']));

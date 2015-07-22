@@ -1,8 +1,7 @@
 <?php
 /**
  * @file
- * mydigipass provides authentication against the MYDIGIPASS.COM service of
- * VASCO Data Security.
+ * MYDIGIPASS provides authentication against the MYDIGIPASS.COM service.
  *
  * For more information about MYDIGIPASS.COM go to https://mydigipass.com
  * To create a free account in the sandbox environment, go to
@@ -156,7 +155,7 @@ function mydigipass_form_user_profile_form_alter(&$form, &$form_state, $form_id)
       $mdp_email = $query->execute()->fetchField();
       $form['mydigipass'][] = array(
         '#type' => 'item',
-        '#markup' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
+        '#markup' => (empty($mdp_email) ? t('This user account is linked to MYDIGIPASS.COM.') : t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email))),
       );
       $form['mydigipass'][] = array(
         '#type' => 'submit',
@@ -205,7 +204,7 @@ function mydigipass_form_user_profile_form_alter(&$form, &$form_state, $form_id)
             'fragment' => ' ',
             'external' => TRUE,
             'attributes' => array(
-              'class' => 'dpplus-connect',
+              'class' => array('dpplus-connect'),
               'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
               'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
               'data-state' => $state_string,
@@ -265,7 +264,7 @@ function mydigipass_form_alter(&$form, &$form_state, $form_id) {
           'fragment' => ' ',
           'external' => TRUE,
           'attributes' => array(
-            'class' => 'dpplus-connect',
+            'class' => array('dpplus-connect'),
             'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
             'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
             'data-state' => $state_string,
@@ -313,7 +312,7 @@ function mydigipass_form_alter(&$form, &$form_state, $form_id) {
           'fragment' => ' ',
           'external' => TRUE,
           'attributes' => array(
-            'class' => 'dpplus-connect',
+            'class' => array('dpplus-connect'),
             'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
             'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
             'data-state' => $state_string,
@@ -422,7 +421,7 @@ function mydigipass_user_view($account, $view_mode, $langcode) {
     $account->content['summary']['mydigipass'] = array(
       '#type' => 'user_profile_item',
       '#title' => 'MYDIGIPASS.COM',
-      '#markup' => t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email)),
+      '#markup' => (empty($mdp_email) ? t('This user account is linked to MYDIGIPASS.COM.') : t('This user account is linked to the following MYDIGIPASS.COM account: @mdp_email', array('@mdp_email' => $mdp_email))),
     );
 
     // Add the known MYDIGIPASS.COM user data of which the administrator
@@ -930,7 +929,7 @@ function mydigipass_link_existing_user() {
  * @return string
  *   The Base64 representation of the array.
  */
-function _mydigipass_encode_state_array($state_array) {
+function _mydigipass_encode_state_array(array $state_array) {
   return base64_encode(json_encode($state_array));
 }
 
