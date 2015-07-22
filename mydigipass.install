@@ -209,3 +209,12 @@ function mydigipass_update_7101() {
 
   variable_set('mydigipass_languages', 'en,fr,de,nl,it');
 }
+
+/**
+ * Implements hook_update_N().
+ *
+ * Changes: removes the mydigipass_origin variable.
+ */
+function mydigipass_update_7102() {
+  variable_del('mydigipass_origin');
+}

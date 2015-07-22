@@ -143,7 +143,7 @@ function mydigipass_form_user_profile_form_alter(&$form, &$form_state, $form_id)
     $query = db_select('mydigipass_user_link', 'mul')
       ->fields('mul')
       ->condition('drupal_uid', $account->uid);
-    $result = $query->execute()->rowCount();
+    $result = $query->countQuery()->execute()->fetchField();
     if ($result == 1) {
       // The user is linked with a MYDIGIPASS.COM account.
       $query = db_select('mydigipass_user_link', 'mul');
@@ -205,13 +205,14 @@ function mydigipass_form_user_profile_form_alter(&$form, &$form_state, $form_id)
             'external' => TRUE,
             'attributes' => array(
               'class' => array('dpplus-connect'),
+              'title' => t('Connect with MYDIGIPASS.COM'),
               'data-client-id' => check_plain(variable_get('mydigipass_client_id', '')),
               'data-redirect-uri' => check_plain(variable_get('mydigipass_callback_url', url('mydigipass/callback', array('absolute' => TRUE)))),
               'data-state' => $state_string,
               'data-style' => variable_get('mydigipass_link_form_style', 'large'),
               'data-text' => variable_get('mydigipass_link_form_text', 'connect'),
               'data-help' => variable_get('mydigipass_login_form_help', 'true'),
-              'data-origin' => check_plain(variable_get('mydigipass_origin', '')),
+              'data-is-sandbox' => (variable_get('mydigipass_environment', '') == 'test' ? 'true' : 'false'),
             ),
           )),
         );
@@ -271,7 +272,7 @@ function mydigipass_form_alter(&$form, &$form_state, $form_id) {
             'data-style' => variable_get('mydigipass_login_form_style', 'default'),
             'data-text' => variable_get('mydigipass_login_form_text', 'secure-login'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
-            'data-origin' => check_plain(variable_get('mydigipass_origin', '')),
+            'data-is-sandbox' => (variable_get('mydigipass_environment', '') == 'test' ? 'true' : 'false'),
           ),
         )),
       );
@@ -319,7 +320,7 @@ function mydigipass_form_alter(&$form, &$form_state, $form_id) {
             'data-style' => variable_get('mydigipass_register_form_style', 'large'),
             'data-text' => variable_get('mydigipass_register_form_text', 'sign-up'),
             'data-help' => variable_get('mydigipass_login_form_help', 'true'),
-            'data-origin' => check_plain(variable_get('mydigipass_origin', '')),
+            'data-is-sandbox' => (variable_get('mydigipass_environment', '') == 'test' ? 'true' : 'false'),
           ),
         )),
       );
@@ -407,7 +408,7 @@ function mydigipass_user_view($account, $view_mode, $langcode) {
   $query = db_select('mydigipass_user_link', 'mul')
     ->fields('mul')
     ->condition('drupal_uid', $account->uid);
-  $result = $query->execute()->rowCount();
+  $result = $query->countQuery()->execute()->fetchField();
   if ($result == 1) {
     // The user is linked to a MYDIGIPASS.COM account, so extract the email
     // address of the MYDIGIPASS.COM account.
@@ -436,15 +437,15 @@ function mydigipass_user_view($account, $view_mode, $langcode) {
         ->isNotNull('mpf.name'))
         ->condition('mpf.selected', TRUE)
       ->orderBy('mpf.weight', 'ASC');
-    $result = $query->execute();
 
     // Only add the section if there are attributes to show.
-    if ($result->rowCount() > 0) {
+    if ($query->countQuery()->execute()->fetchField() > 0) {
       $account->content['mydigipass_user_data'] = array(
         '#type' => 'user_profile_category',
         '#title' => t('MYDIGIPASS.COM user data'),
         '#description' => t('This data is information which was obtained from MYDIGIPASS.COM.'),
       );
+      $result = $query->execute();
       foreach ($result as $row) {
         $account->content['mydigipass_user_data'][$row->attribute_key] = array(
           '#type' => 'user_profile_item',
@@ -511,7 +512,7 @@ function mydigipass_user_login(&$edit, $account) {
     $query = db_select('mydigipass_user_link', 'mul')
       ->fields('mul')
       ->condition('drupal_uid', $account->uid);
-    $result = $query->execute()->rowCount();
+    $result = $query->countQuery()->execute()->fetchField();
 
     if (($result == 1) && !mydigipass_logged_in_with_mydigipass()) {
       global $user;
@@ -538,8 +539,8 @@ function mydigipass_preprocess_link(&$variables) {
   // 4. Link path must be user/logout.
   if (user_is_logged_in() && mydigipass_logged_in_with_mydigipass() && (variable_get('mydigipass_logout_feature', 0) == 1) && ($variables['path'] == 'user/logout')) {
     $variables['options']['attributes']['class'][] = 'dpplus-logout';
-    $variables['options']['attributes']['data-origin'] = check_plain(variable_get('mydigipass_origin', ''));
     $variables['options']['attributes']['data-client-id'] = check_plain(variable_get('mydigipass_client_id', ''));
+    $variables['options']['attributes']['data-is-sandbox'] = (variable_get('mydigipass_environment', '') == 'test' ? 'true' : 'false');
   }
 }
 
@@ -556,7 +557,7 @@ function mydigipass_enforce_authentication_mode_during_login($form, &$form_state
     $query->join('users', 'u', 'u.uid = mul.drupal_uid');
     $query->condition('u.name', trim($form_state['values']['name']))
       ->fields('mul');
-    $result = $query->execute()->rowCount();
+    $result = $query->countQuery()->execute()->fetchField();
 
     if ($result == 1) {
       form_set_error('name', t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM."));
@@ -580,7 +581,7 @@ function mydigipass_enforce_authentication_mode_during_password_reset($form, &$f
       ->condition(db_or()
         ->condition('u.name', trim($form_state['values']['name']))
         ->condition('u.mail', trim($form_state['values']['name'])));
-    $result = $query->execute()->rowCount();
+    $result = $query->countQuery()->execute()->fetchField();
 
     if ($result == 1) {
       form_set_error('name', t("This user account has been linked to a MYDIGIPASS.COM account. According to this website's policy, an account linked to MYDIGIPASS.COM can only logon via MYDIGIPASS.COM. As such you cannot use the password reset functionality."));
@@ -601,7 +602,7 @@ function mydigipass_verify_if_user_already_linked($form, &$form_state) {
   $query->join('users', 'u', 'u.uid = mul.drupal_uid');
   $query->condition('u.name', trim($form_state['values']['name']))
     ->fields('mul');
-  $result = $query->execute()->rowCount();
+  $result = $query->countQuery()->execute()->fetchField();
 
   if ($result == 1) {
     form_set_error('name', t("The username %name has already been linked to a MYDIGIPASS.COM account. A user can only be linked to one MYDIGIPASS.COM account.", array('%name' => $form_state['values']['name'])));
@@ -649,13 +650,12 @@ function mydigipass_link_user_to_new_user($form, &$form_state) {
   $query = db_select('users', 'u')
     ->fields('u', array('uid'))
     ->condition('u.name', $form_state['values']['name']);
-  $result = $query->execute();
 
   // Previous submit handlers should already have created the user.
-  if ($result->rowCount() == 1) {
+  if ($query->countQuery()->execute()->fetchField() == 1) {
     // Link the Drupal user to the MYDIGIPASS.COM user.
     $fields = array(
-      'drupal_uid' => $result->fetchField(),
+      'drupal_uid' => $query->execute()->fetchField(),
       'mdp_uuid' => $_SESSION['mydigipass_uuid'],
     );
     try {
@@ -739,7 +739,7 @@ function _mydigipass_get_endpoint_url($endpoint) {
     return '';
   }
 
-  $base_url = variable_get('mydigipass_origin', '');
+  $base_url = "https://www.mydigipass.com";
 
   $return = '';
   switch ($endpoint) {
@@ -879,7 +879,10 @@ function mydigipass_link_new_user() {
   else {
     if (user_register_access()) {
       $output = t('Complete this form to create a new account on this website to link it to your MYDIGIPASS.COM account.');
-      $output .= drupal_render(drupal_get_form('mydigipass_user_register_form'));
+      // Put form in variable before passing to drupal_render. Else we get a
+      // strict warning: Only variables should be passed by reference.
+      $register_form = drupal_get_form('mydigipass_user_register_form');
+      $output .= drupal_render($register_form);
     }
     else {
       $output = t("According to this website's policy it is not allowed to create new accounts.");
@@ -910,7 +913,10 @@ function mydigipass_link_existing_user() {
   }
   else {
     $output = t('Complete this form if you already have an account on this website. Enter your credentials to link this account to MYDIGIPASS.COM. As soon as your account is linked, you will be able to log in to this site with your MYDIGIPASS.COM authenticator.');
-    $output .= drupal_render(drupal_get_form('mydigipass_user_login_form'));
+    // Put form in variable before passing to drupal_render. Else we get a
+    // strict warning: Only variables should be passed by reference.
+    $login_form = drupal_get_form('mydigipass_user_login_form');
+    $output .= drupal_render($login_form);
   }
 
   return $output;

@@ -139,12 +139,12 @@ function mydigipass_callback() {
   $query = db_select('mydigipass_user_link', 'mul')
     ->condition('mul.mdp_uuid', $user_data_array['uuid'])
     ->fields('mul', array('drupal_uid'));
-  $result = $query->execute();
+  $result = $query->countQuery()->execute();
 
-  if ($result->rowCount() == 1) {
+  if ($result->fetchField() == 1) {
     // The MYDIGIPASS.COM end-user is already linked to an existing Drupal
     // user, let's authenticate the Drupal user.
-    $uid = $result->fetchField();
+    $uid = $query->execute()->fetchField();
     $account = user_load($uid);
 
     // The following authentication flow is copied from the core openid module.

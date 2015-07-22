@@ -3,10 +3,3 @@ description = Implements strong authentication via MYDIGIPASS.COM
 package = Security
 core = 7.x
 configure = admin/config/services/mydigipass
-
-; Information added by Drupal.org packaging script on 2014-11-27
-version = "7.x-1.4"
-core = "7.x"
-project = "mydigipass"
-datestamp = "1417091585"
-
